@@ -261,7 +261,7 @@ const App = () => {
                     type="text"
                     value={editTitle}
                     // Mobile optimization: Remove artificial delay in input handling
-                    onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
+                    onChange={(e) => { setEditTitle(e.target.value.slice(0, 40));}}
                     // Mobile optimization: Add input mode for better keyboard handling
                     inputMode="text"
                     // Mobile optimization: Disable auto-corrections that can slow down input
@@ -374,10 +374,7 @@ const App = () => {
                   type="text"
                   value={quickAddTitle}
                   // Mobile optimization: Remove artificial delay in input handling
-                  onChange={(e) => {
-                    // Direct value assignment for immediate feedback
-                    setQuickAddTitle(e.target.value.slice(0, 40));
-                  }}
+                  onChange={(e) => { setEditTitle(e.target.value.slice(0, 40));}}
                   placeholder="Enter Main Quest"
                   // Mobile optimization: Add input mode for better keyboard handling
                   inputMode="text"
