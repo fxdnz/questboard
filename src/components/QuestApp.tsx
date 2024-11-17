@@ -259,9 +259,13 @@ const App = () => {
                   
                   <input
                     type="text"
-                    value={editTitle}
+                    value={newQuestTitle}
                     // Mobile optimization: Remove artificial delay in input handling
-                    onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
+                    onChange={(e) => {
+                      // Direct value assignment for immediate feedback
+                      setNewQuestTitle(e.target.value.slice(0, 40));
+                    }}
+                    placeholder="Enter Main Quest"
                     // Mobile optimization: Add input mode for better keyboard handling
                     inputMode="text"
                     // Mobile optimization: Disable auto-corrections that can slow down input
@@ -269,13 +273,11 @@ const App = () => {
                     autoCapitalize="off"
                     spellCheck="false"
                     // Mobile optimization: Remove delay in touch events
-                    className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
-                    autoFocus
+                    className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
+                    maxLength={40}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        saveEdit(quest.id);
-                      } else if (e.key === 'Escape') {
-                        cancelEdit();
+                        handleAddQuest();
                       }
                     }}
                   />
@@ -372,11 +374,11 @@ const App = () => {
                 <div className="relative">
                 <input
                   type="text"
-                  value={quickAddTitle}
+                  value={newQuestTitle}
                   // Mobile optimization: Remove artificial delay in input handling
                   onChange={(e) => {
                     // Direct value assignment for immediate feedback
-                    setQuickAddTitle(e.target.value.slice(0, 40));
+                    setNewQuestTitle(e.target.value.slice(0, 40));
                   }}
                   placeholder="Enter Main Quest"
                   // Mobile optimization: Add input mode for better keyboard handling
@@ -386,14 +388,11 @@ const App = () => {
                   autoCapitalize="off"
                   spellCheck="false"
                   // Mobile optimization: Remove delay in touch events
-                  className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
-                  autoFocus
+                  className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
+                  maxLength={40}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleQuickAdd();
-                    } else if (e.key === 'Escape') {
-                      setShowQuickAdd(false);
-                      setQuickAddTitle('');
+                      handleAddQuest();
                     }
                   }}
                 />
