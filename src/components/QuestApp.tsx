@@ -262,6 +262,10 @@ const App = () => {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
                     className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    // Added properties for better mobile handling
+                    inputMode="text" // Explicitly set input mode
+                    autoComplete="off" // Prevent unwanted autocomplete
+                    autoCorrect="off" // Disable autocorrect
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -362,22 +366,26 @@ const App = () => {
               
               <div className="flex-1">
                 <div className="relative">
-                  <input
-                    type="text"
-                    value={quickAddTitle}
-                    onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
-                    placeholder="Enter Main Quest"
-                    className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleQuickAdd();
-                      } else if (e.key === 'Escape') {
-                        setShowQuickAdd(false);
-                        setQuickAddTitle('');
-                      }
-                    }}
-                  />
+                <input
+                  type="text"
+                  value={quickAddTitle}
+                  onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
+                  placeholder="Enter Main Quest"
+                  className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  // Added properties for better mobile handling
+                  inputMode="text" // Explicitly set input mode
+                  autoComplete="off" // Prevent unwanted autocomplete
+                  autoCorrect="off" // Disable autocorrect
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleQuickAdd();
+                    } else if (e.key === 'Escape') {
+                      setShowQuickAdd(false);
+                      setQuickAddTitle('');
+                    }
+                  }}
+                />
                   <div className="absolute right-3 top-3 text-gray-400 text-sm">
                     {40 - quickAddTitle.length}
                   </div>
@@ -684,19 +692,23 @@ const App = () => {
               </DropdownMenu>
 
               <div className="flex-1">
-                <input
-                  type="text"
-                  value={newQuestTitle}
-                  onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
-                  placeholder="Enter Main Quest"
-                  maxLength={40}
-                  className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddQuest();
-                    }
-                  }}
-                />
+              <input
+                type="text"
+                value={newQuestTitle}
+                onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
+                placeholder="Enter Main Quest"
+                maxLength={40}
+                className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                // Added properties for better mobile handling
+                inputMode="text" // Explicitly set input mode
+                autoComplete="off" // Prevent unwanted autocomplete
+                autoCorrect="off" // Disable autocorrect
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddQuest();
+                  }
+                }}
+              />
               
               </div>
             </div>
