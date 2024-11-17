@@ -169,20 +169,7 @@ const App = () => {
     // Add more icon options as needed
   ];
 
-  const handleQuickAdd = (): void => {
-    if (quickAddTitle.trim()) {
-      const newQuest = {
-        id: quests.length + 1,
-        title: quickAddTitle.trim(),
-        energy: 5,
-        iconPath: selectedIcon // Add the selected icon
-      };
-      setQuests([...quests, newQuest]);
-      setQuickAddTitle('');
-      setShowQuickAdd(false);
-      setSelectedIcon('/quest.webp'); // Reset to default icon
-    }
-  };
+  
 
   useEffect(() => {
     if (energy >= maxEnergy) {
@@ -204,18 +191,27 @@ const App = () => {
     }, 300000);
   };
 
-  const handleAddQuest = (): void => {
-    if (newQuestTitle.trim()) {
+  const handleAddQuest = (title: string, closeModal?: () => void): void => {
+    if (title.trim()) {
       const newQuest: Quest = {
         id: quests.length + 1,
-        title: newQuestTitle,
+        title: title.trim(),
         energy: 5,
-        iconPath: selectedIcon // Add the selected icon
+        iconPath: selectedIcon
       };
       setQuests([...quests, newQuest]);
+      
+      // Reset input and UI state
+      if (closeModal) {
+        closeModal(); // Close modal if provided
+      } else {
+        setShowQuickAdd(false); // Close quick add if not in modal
+      }
+      
+      // Reset states
+      setQuickAddTitle('');
       setNewQuestTitle('');
-      setShowAddQuestModal(false);
-      setSelectedIcon('/quest.webp'); // Reset to default icon
+      setSelectedIcon('/quest.webp');
     }
   };
 
@@ -370,16 +366,15 @@ const App = () => {
                   type="text"
                   value={quickAddTitle}
                   onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
-                  placeholder="Enter Main Quest"
+                  placeholder="Enter Quest Title"
                   className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  // Added properties for better mobile handling
-                  inputMode="text" // Explicitly set input mode
-                  autoComplete="off" // Prevent unwanted autocomplete
-                  autoCorrect="off" // Disable autocorrect
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCorrect="off"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleQuickAdd();
+                      handleAddQuest(quickAddTitle);
                     } else if (e.key === 'Escape') {
                       setShowQuickAdd(false);
                       setQuickAddTitle('');
@@ -394,13 +389,13 @@ const App = () => {
             </div>
 
             <div className="flex justify-start space-x-2">
-              <button
-                onClick={handleQuickAdd}
-                disabled={!quickAddTitle.trim()}
-                className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add Quest
-              </button>
+            <button
+            onClick={() => handleAddQuest(quickAddTitle)}
+            disabled={!quickAddTitle.trim()}
+            className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add Quest
+          </button>
               <button
                 onClick={() => {
                   setShowQuickAdd(false);
@@ -696,16 +691,14 @@ const App = () => {
                 type="text"
                 value={newQuestTitle}
                 onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
-                placeholder="Enter Main Quest"
-                maxLength={40}
-                className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                // Added properties for better mobile handling
-                inputMode="text" // Explicitly set input mode
-                autoComplete="off" // Prevent unwanted autocomplete
-                autoCorrect="off" // Disable autocorrect
+                placeholder="Enter Quest Title"
+                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleAddQuest();
+                    handleAddQuest(newQuestTitle, () => setShowAddQuestModal(false));
                   }
                 }}
               />
@@ -722,7 +715,7 @@ const App = () => {
               Cancel
             </button>
             <button
-              onClick={handleAddQuest}
+              onClick={() => handleAddQuest(newQuestTitle, () => setShowAddQuestModal(false))}
               className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500"
               disabled={!newQuestTitle.trim()}
             >
