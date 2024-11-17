@@ -67,7 +67,7 @@ const App = () => {
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [energy, setEnergy] = useState<number>(0);
-  const [diamonds, setDiamonds] = useState<number>(1000);
+  const [diamonds] = useState<number>(1000);
   const [adventureNumber, setAdventureNumber] = useState<number>(1); // Add this state for tracking adventure number
   const [maxEnergy, setMaxEnergy] = useState<number>(15); // Initial max energy requirement
   const [showAdventureModal, setShowAdventureModal] = useState<boolean>(false);
