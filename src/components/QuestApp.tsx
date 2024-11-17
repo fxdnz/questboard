@@ -67,7 +67,7 @@ const App = () => {
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [energy, setEnergy] = useState<number>(0);
-  const [diamonds] = useState<number>(1000);
+  const [diamonds, setDiamonds] = useState<number>(1000);
   const [adventureNumber, setAdventureNumber] = useState<number>(1); // Add this state for tracking adventure number
   const [maxEnergy, setMaxEnergy] = useState<number>(15); // Initial max energy requirement
   const [showAdventureModal, setShowAdventureModal] = useState<boolean>(false);
@@ -260,16 +260,8 @@ const App = () => {
                   <input
                     type="text"
                     value={editTitle}
-                    // Mobile optimization: Remove artificial delay in input handling
-                    onChange={(e) => { setEditTitle(e.target.value.slice(0, 40));}}
-                    // Mobile optimization: Add input mode for better keyboard handling
-                    inputMode="text"
-                    // Mobile optimization: Disable auto-corrections that can slow down input
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    // Mobile optimization: Remove delay in touch events
-                    className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
+                    onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
+                    className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -370,30 +362,22 @@ const App = () => {
               
               <div className="flex-1">
                 <div className="relative">
-                <input
-                  type="text"
-                  value={quickAddTitle}
-                  // Mobile optimization: Remove artificial delay in input handling
-                  onChange={(e) => { setEditTitle(e.target.value.slice(0, 40));}}
-                  placeholder="Enter Main Quest"
-                  // Mobile optimization: Add input mode for better keyboard handling
-                  inputMode="text"
-                  // Mobile optimization: Disable auto-corrections that can slow down input
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  // Mobile optimization: Remove delay in touch events
-                  className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleQuickAdd();
-                    } else if (e.key === 'Escape') {
-                      setShowQuickAdd(false);
-                      setQuickAddTitle('');
-                    }
-                  }}
-                />
+                  <input
+                    type="text"
+                    value={quickAddTitle}
+                    onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
+                    placeholder="Enter Main Quest"
+                    className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleQuickAdd();
+                      } else if (e.key === 'Escape') {
+                        setShowQuickAdd(false);
+                        setQuickAddTitle('');
+                      }
+                    }}
+                  />
                   <div className="absolute right-3 top-3 text-gray-400 text-sm">
                     {40 - quickAddTitle.length}
                   </div>
@@ -700,30 +684,19 @@ const App = () => {
               </DropdownMenu>
 
               <div className="flex-1">
-              <input
-                type="text"
-                value={newQuestTitle}
-                // Mobile optimization: Remove artificial delay in input handling
-                onChange={(e) => {
-                  // Direct value assignment for immediate feedback
-                  setNewQuestTitle(e.target.value.slice(0, 40));
-                }}
-                placeholder="Enter Main Quest"
-                // Mobile optimization: Add input mode for better keyboard handling
-                inputMode="text"
-                // Mobile optimization: Disable auto-corrections that can slow down input
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                // Mobile optimization: Remove delay in touch events
-                className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-manipulation"
-                maxLength={40}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddQuest();
-                  }
-                }}
-              />
+                <input
+                  type="text"
+                  value={newQuestTitle}
+                  onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
+                  placeholder="Enter Main Quest"
+                  maxLength={40}
+                  className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddQuest();
+                    }
+                  }}
+                />
               
               </div>
             </div>
