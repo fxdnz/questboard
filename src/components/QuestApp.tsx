@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Home, Rocket, ShoppingBag, UserCircle2, Plus, MoreVertical, CheckCircle, Trash2, } from 'lucide-react';
+import { Home, Rocket, ShoppingBag, UserCircle2, Plus, MoreVertical, CheckCircle, Trash2, Check, Edit2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -27,10 +27,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
+
 interface Quest {
   id: number;
   title: string;
   energy: number;
+  iconPath: string; // New field for storing the selected icon path
+  isEditing?: boolean; // Added isEditing flag
+}
+
+interface IconOption {
+  id: string;
+  imagePath: string;
 }
 
 interface SideQuest {
@@ -51,15 +60,82 @@ interface Voucher {
 type TabType = 'home' | 'quests' | 'shop' | 'profile';
 
 const App = () => {
+  const [characterAnimation, setCharacterAnimation] = useState<string>('idle.gif');
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editIcon, setEditIcon] = useState<string>('');
+  const [selectedIcon, setSelectedIcon] = useState<string>('/quest.webp');
+  const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
+  const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [energy, setEnergy] = useState<number>(0);
   const [diamonds, setDiamonds] = useState<number>(1000);
-  const [maxEnergy] = useState<number>(15);
+  const [adventureNumber, setAdventureNumber] = useState<number>(1); // Add this state for tracking adventure number
+  const [maxEnergy, setMaxEnergy] = useState<number>(15); // Initial max energy requirement
   const [showAdventureModal, setShowAdventureModal] = useState<boolean>(false);
   const [showAddQuestModal, setShowAddQuestModal] = useState<boolean>(false);
   const [quests, setQuests] = useState<Quest[]>([
-    { id: 1, title: 'Write a blog for Techno', energy: 5 },
-    { id: 2, title: 'Log-in page for SoftEng', energy: 5 }
+
   ]);
+
+  const getOrdinalSuffix = (number: number): string => {
+    // Get the last digit of the number
+    const lastDigit = number % 10;
+    // Get the last two digits of the number
+    const lastTwoDigits = number % 100;
+    
+    // Special cases for 11, 12, 13
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
+      return 'th';
+    }
+    
+    // Handle other cases based on last digit
+    switch (lastDigit) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  };
+
+
+  const startEditing = (quest: Quest): void => {
+    const updatedQuests = quests.map(q => ({
+      ...q,
+      isEditing: q.id === quest.id
+    }));
+    setQuests(updatedQuests);
+    setEditTitle(quest.title);
+    setEditIcon(quest.iconPath);
+  };
+
+  const saveEdit = (id: number): void => {
+    setQuests(quests.map(quest => {
+      if (quest.id === id) {
+        return {
+          ...quest,
+          title: editTitle,
+          iconPath: editIcon,
+          isEditing: false
+        };
+      }
+      return quest;
+    }));
+    setEditTitle('');
+    setEditIcon('');
+  };
+
+  const cancelEdit = (): void => {
+    setQuests(quests.map(quest => ({
+      ...quest,
+      isEditing: false
+    })));
+    setEditTitle('');
+    setEditIcon('');
+  };
+
   const [sideQuests] = useState<SideQuest[]>([
     { 
       id: 1, 
@@ -84,6 +160,30 @@ const App = () => {
     { id: 3, title: 'Extra Quest Slot', diamonds: 7500, expires: '2024-12-31' }
   ]);
 
+  const iconOptions: IconOption[] = [
+    { id: 'default', imagePath: '/quest.webp' },
+    { id: 'study',  imagePath: '/study.webp' },
+    { id: 'exercise',  imagePath: '/exercise.webp' },
+    { id: 'work', imagePath: '/work.webp' },
+    
+    // Add more icon options as needed
+  ];
+
+  const handleQuickAdd = (): void => {
+    if (quickAddTitle.trim()) {
+      const newQuest = {
+        id: quests.length + 1,
+        title: quickAddTitle.trim(),
+        energy: 5,
+        iconPath: selectedIcon // Add the selected icon
+      };
+      setQuests([...quests, newQuest]);
+      setQuickAddTitle('');
+      setShowQuickAdd(false);
+      setSelectedIcon('/quest.webp'); // Reset to default icon
+    }
+  };
+
   useEffect(() => {
     if (energy >= maxEnergy) {
       setShowAdventureModal(true);
@@ -91,9 +191,17 @@ const App = () => {
   }, [energy, maxEnergy]);
 
   const startAdventure = (): void => {
-    setEnergy(prev => Math.max(0, prev - 10));
-    setDiamonds(prev => prev + 500);
+    setEnergy(0);
+    setAdventureNumber(prev => prev + 1);
+    setMaxEnergy(prev => prev + 5);
     setShowAdventureModal(false);
+    // Change the character animation to rightadv.gif
+    setCharacterAnimation('rightadv.gif');
+    
+    // Reset the animation back to idle after 3 seconds
+    setTimeout(() => {
+      setCharacterAnimation('idle.gif');
+    }, 300000);
   };
 
   const handleAddQuest = (): void => {
@@ -101,11 +209,13 @@ const App = () => {
       const newQuest: Quest = {
         id: quests.length + 1,
         title: newQuestTitle,
-        energy: 5
+        energy: 5,
+        iconPath: selectedIcon // Add the selected icon
       };
       setQuests([...quests, newQuest]);
       setNewQuestTitle('');
       setShowAddQuestModal(false);
+      setSelectedIcon('/quest.webp'); // Reset to default icon
     }
   };
 
@@ -123,39 +233,187 @@ const App = () => {
       {quests.map(quest => (
         <Card key={quest.id} className="p-3 bg-gray-800 text-white">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <img src="/quest.webp"  className="rounded h-10 w-10" />
-              <span>{quest.title}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-yellow-400">{quest.energy}⚡</span>
-              <button
-                onClick={() => completeQuest(quest)}
-                className="focus:outline-none"
-              >
-                <CheckCircle 
-                  size={20} 
-                  className="text-gray-600 hover:text-gray-400"
-                />
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <MoreVertical size={16} className="text-gray-400" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-gray-800 text-white border-gray-700">
-                  <DropdownMenuItem 
-                    onClick={() => deleteQuest(quest.id)}
-                    className="text-red-400 focus:text-red-300 cursor-pointer"
+            {quest.isEditing ? (
+              <div className="flex-1 space-y-3">
+                <div className="flex space-x-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="p-2 rounded hover:bg-gray-700 active:bg-gray-600 transition-colors duration-150 border border-gray-700">
+                      <img src={selectedIcon} className="h-8 w-8 rounded" alt="Selected icon" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide"> {/* Adjusted width, added max height and scroll */}
+                    <div className="grid grid-cols-1 gap-2"> {/* Changed to 1 column */}
+                      {iconOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.id}
+                          onClick={() => setSelectedIcon(option.imagePath)}
+                          className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
+                            selectedIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''
+                          }`}
+                        >
+                          <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
+                    className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        saveEdit(quest.id);
+                      } else if (e.key === 'Escape') {
+                        cancelEdit();
+                      }
+                    }}
+                  />
+                </div>
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => saveEdit(quest.id)}
+                    className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-500"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Quest
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    Save
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    className="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // View mode
+              <div className="flex items-center space-x-3">
+                <img src={quest.iconPath} className="rounded h-8 w-8" alt="Quest icon" />
+                <span>{quest.title}</span>
+              </div>
+            )}
+            
+            {!quest.isEditing && (
+              <div className="flex items-center space-x-2">
+                <span className="text-yellow-400">{quest.energy}⚡</span>
+                <button
+                  onClick={() => completeQuest(quest)}
+                  className="p-1 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-700 transform transition-transform duration-75 focus:outline-none"
+                >
+                  <Check size={16} className="text-white" strokeWidth={3} />
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <MoreVertical size={16} className="text-gray-400" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-gray-800 text-white border-gray-700">
+                    {/* Add Edit option to dropdown */}
+                    <DropdownMenuItem 
+                      onClick={() => startEditing(quest)}
+                      className="text-white focus:text-gray-200 cursor-pointer"
+                    >
+                      <Edit2 className="mr-2 h-4 w-4" />
+                      Edit Quest
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => deleteQuest(quest.id)}
+                      className="text-red-400 focus:text-red-300 cursor-pointer"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Quest
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
         </Card>
       ))}
+  
+      {/* Quick Add Quest Section */}
+      {showQuickAdd ? (
+        
+        <Card className="p-3 bg-gray-800">
+          <div className="space-y-3">
+            <div className="flex space-x-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="p-2 rounded hover:bg-gray-700 active:bg-gray-600 transition-colors duration-150 border border-gray-700">
+                  <img src={selectedIcon} className="h-8 w-8 rounded" alt="Selected icon" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide"> {/* Adjusted width, added max height and scroll */}
+                  <div className="grid grid-cols-1 gap-2"> {/* Changed to 1 column */}
+                    {iconOptions.map((option) => (
+                      <DropdownMenuItem
+                        key={option.id}
+                        onClick={() => setSelectedIcon(option.imagePath)}
+                        className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
+                          selectedIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''
+                        }`}
+                      >
+                        <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <div className="flex-1">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={quickAddTitle}
+                    onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
+                    placeholder="Enter Main Quest"
+                    className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleQuickAdd();
+                      } else if (e.key === 'Escape') {
+                        setShowQuickAdd(false);
+                        setQuickAddTitle('');
+                      }
+                    }}
+                  />
+                  <div className="absolute right-3 top-3 text-gray-400 text-sm">
+                    {40 - quickAddTitle.length}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-start space-x-2">
+              <button
+                onClick={handleQuickAdd}
+                disabled={!quickAddTitle.trim()}
+                className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Quest
+              </button>
+              <button
+                onClick={() => {
+                  setShowQuickAdd(false);
+                  setQuickAddTitle('');
+                }}
+                className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <button
+          onClick={() => setShowQuickAdd(true)}
+          className="w-full p-3 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-center space-x-2"
+        >
+          <Plus size={20} />
+          <span>Add Quest</span>
+        </button>
+      )}
     </div>
   );
 
@@ -166,7 +424,14 @@ const App = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <img src="/energy.webp" className="rounded h-8 w-8" />
-              <span className="text-white font-medium">1st Adventure</span>
+              {/* Updated to show dynamic ordinal suffix */}
+              <span className="text-white font-medium">
+                {adventureNumber}
+                <span className="text-xs align-top">
+                  {getOrdinalSuffix(adventureNumber)}
+                </span>
+                {' Adventure'}
+              </span>
             </div>
             <span className="text-white font-medium">{energy} / {maxEnergy}</span>
           </div>
@@ -180,12 +445,11 @@ const App = () => {
             Gain ⚡ energy so Alto can go discover new things today!
           </div>
         </div>
-  
+
         <div className="text-gray-300 flex items-center space-x-2">
-          <span>{quests.length}</span>
-          <span>main quests left for today!</span>
+          <span>{quests.length} main quests left for today!</span>
         </div>
-  
+
         <QuestList />
       </div>
     );
@@ -341,8 +605,24 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto">
-      <div className="bg-black text-white p-4 flex justify-between items-center">
+    
+    <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto relative">
+      {/* Add winter background image as a fixed background */}
+      <div 
+        className="fixed inset-0 max-w-3xl mx-auto z-0"
+        style={{
+          backgroundImage: "url('/winter.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.8, // Adjust opacity to ensure content remains visible
+        }}
+      />
+       {/* Add an overlay to ensure content readability */}
+       <div className="fixed inset-0 max-w-3xl mx-auto bg-black opacity-30 z-0" />
+
+        {/* Ensure all content is above the background by adding z-10 */}
+      <div className="bg-transparent text-white p-4 flex justify-between items-center relative z-10">
         <div></div>
         <div className="flex items-center space-x-2">
           <span>💎</span>
@@ -380,24 +660,48 @@ const App = () => {
               Create a new quest for Alto to complete
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <input
-              type="text"
-              value={newQuestTitle}
-              onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
-              placeholder="Enter Quest Title"
-              maxLength={40}
-              className="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddQuest();
-                }
-              }}
-            />
-            <div className="text-sm text-gray-400">
-              {40 - newQuestTitle.length} characters remaining
+          <div className="py-4">
+            <div className="flex space-x-4 items-start">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="p-2 rounded hover:bg-gray-700 active:bg-gray-600 transition-colors duration-150 border border-gray-700">
+                  <img src={selectedIcon} className="h-8 w-8 rounded" alt="Selected icon" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide"> {/* Adjusted width, added max height and scroll */}
+                  <div className="grid grid-cols-1 gap-2"> {/* Changed to 1 column */}
+                    {iconOptions.map((option) => (
+                      <DropdownMenuItem
+                        key={option.id}
+                        onClick={() => setSelectedIcon(option.imagePath)}
+                        className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
+                          selectedIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''
+                        }`}
+                      >
+                        <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={newQuestTitle}
+                  onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
+                  placeholder="Enter Main Quest"
+                  maxLength={40}
+                  className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddQuest();
+                    }
+                  }}
+                />
+              
+              </div>
             </div>
           </div>
+ 
           <DialogFooter>
             <button
               onClick={() => setShowAddQuestModal(false)}
@@ -416,13 +720,17 @@ const App = () => {
         </DialogContent>
       </Dialog>
         
-      <div className="flex-1 overflow-y-auto pb-20">
-        <div className="relative h-48 bg-black">
-          <div className="flex justify-center items-center p-20">
+      <div className="flex-1 overflow-y-auto pb-20 relative z-10">
+        {/* Changed background to transparent */}
+        <div className="relative h-56 bg-transparent">
+          <div className="absolute inset-0 flex justify-center items-center">
             <img 
-              src="alto.png" 
+              src={characterAnimation} // Use the dynamic animation state here
               alt="Center decoration" 
-              className="rounded h-20 w-20"
+              className={`h-[180px] w-[160px] ml-10 ${
+                // Add padding classes when rightadv.gif is selected
+                characterAnimation === 'rightadv.gif' ? 'mr-20 ' : ''
+              }`}
             />
           </div>
         </div>
@@ -430,7 +738,7 @@ const App = () => {
         {renderContent()}
       </div>
 
-      <div className="bg-gray-900 text-gray-400 p-4 fixed bottom-0 w-full max-w-3xl">
+      <div className="bg-gray-900/90 text-gray-400 p-4 fixed bottom-0 w-full max-w-3xl z-20">
         <div className="flex items-center justify-evenly w-full space-x-4">
           <button
             onClick={() => setActiveTab('home')}
