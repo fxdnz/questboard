@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
 import { doCreateUserWithEmailAndPassword, doSignInWithGoogle } from '@/firebase/auth';
+import { FirebaseError } from 'firebase/app'; // Import FirebaseError for more specific error handling
 
 interface RegisterScreenProps {
   onLogin: ({ email }: { email: string }) => void;
@@ -37,8 +38,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
     try {
       await doCreateUserWithEmailAndPassword(registerEmail, registerPassword);
       onLogin({ email: registerEmail });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        // Handle Firebase-specific errors
+        setError(err.message);
+      } else if (err instanceof Error) {
+        // Handle general JavaScript errors
+        setError(err.message);
+      } else {
+        // Catch any unexpected errors
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -50,8 +60,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
     try {
       await doSignInWithGoogle();
       onLogin({ email: registerEmail });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        // Handle Firebase-specific errors
+        setError(err.message);
+      } else if (err instanceof Error) {
+        // Handle general JavaScript errors
+        setError(err.message);
+      } else {
+        // Catch any unexpected errors
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +173,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
             >
               Google
             </Button>
-            
           </div>
         </div>
       </div>
