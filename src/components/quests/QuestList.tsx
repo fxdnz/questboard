@@ -11,7 +11,7 @@ interface QuestListProps {
   setEnergy: React.Dispatch<React.SetStateAction<number>>;
   maxEnergy: number;
   isOnAdventure: boolean;
-  adventureProgress: number;
+  
 }
 
 interface EditState {
@@ -25,7 +25,7 @@ const QuestList: React.FC<QuestListProps> = ({
   setEnergy, 
   maxEnergy, 
   isOnAdventure,
-  adventureProgress 
+  
 }) => {
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [quickAddIcon, setQuickAddIcon] = useState<string>(DEFAULT_ICON);

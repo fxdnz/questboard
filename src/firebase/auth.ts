@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, Auth, UserCredential, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, sendPasswordResetEmail, updatePassword, sendEmailVerification } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
 import { auth } from './firebase';  // Assuming you're using Firebase auth instance here
 
 // Function to create a user with email and password
@@ -45,7 +45,6 @@ export const doSignInWithGoogle = async (): Promise<UserCredential | null> => {
     return null;
   }
 };
-
 
 // Function to sign out the current user
 export const doSignOut = async (): Promise<void> => {
