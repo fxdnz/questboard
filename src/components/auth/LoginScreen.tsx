@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
 import { doSignInWithEmailAndPassword, doSignInWithGoogle } from '@/firebase/auth';
+import { FirebaseError } from 'firebase/app'; // Import FirebaseError for more specific error handling
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -22,8 +23,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
     try {
       await doSignInWithEmailAndPassword(loginEmail, loginPassword);
       onLogin();
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        // Handle Firebase specific errors
+        setErrorMessage(err.message);
+      } else {
+        // Handle general errors
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -35,8 +42,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
     try {
       await doSignInWithGoogle();
       onLogin();
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        // Handle Firebase specific errors
+        setErrorMessage(err.message);
+      } else {
+        // Handle general errors
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -51,8 +64,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center">
             <img src="/logo.png" alt="Logo" className="w-35 h-32 mb-4" />
-           
-            
           </div>
 
           {errorMessage && (

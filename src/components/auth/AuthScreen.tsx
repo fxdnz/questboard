@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
-import { useAuth } from '@/context/authContext';
 
 const AuthScreen = () => {
   const [isLoginView, setIsLoginView] = useState(true);
