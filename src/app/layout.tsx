@@ -1,22 +1,29 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+// src/app/layout.tsx
+import type { Metadata } from 'next'
+import { AuthProvider } from '@/context/authContext';
+import { NavigationProvider } from '@/context/NavigationContext';
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Questboard",
-  description: "Your game app description",
-};
+  title: 'Quest Adventure App',
+  description: 'Complete quests and go on adventures',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

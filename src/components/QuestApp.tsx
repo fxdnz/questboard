@@ -2,39 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Home, Rocket, ShoppingBag, UserCircle2, Plus, MoreVertical, CheckCircle, Trash2, Check, Edit2 } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-
+import {AlertDialog,AlertDialogAction,AlertDialogContent,AlertDialogDescription,AlertDialogFooter,AlertDialogHeader,AlertDialogTitle,} from "@/components/ui/alert-dialog";
+import {Dialog,DialogContent,DialogDescription,DialogFooter,DialogHeader,DialogTitle,} from "@/components/ui/dialog";
+import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger,} from "@/components/ui/dropdown-menu";
 
 interface Quest {
   id: number;
   title: string;
   energy: number;
-  iconPath: string; // New field for storing the selected icon path
-  isEditing?: boolean; // Added isEditing flag
+  iconPath: string; 
+  isEditing?: boolean; 
 }
 
 interface IconOption {
@@ -57,37 +36,97 @@ interface Voucher {
   expires: string;
 }
 
+const ICON_OPTIONS: IconOption[] = [
+  { id: 'default', imagePath: '/quest.webp' },
+  { id: 'study',  imagePath: '/study.webp' },
+  { id: 'exercise',  imagePath: '/exercise.webp' },
+  { id: 'work', imagePath: '/work.webp' },
+];
+
+const DEFAULT_ICON = '/quest.webp';
+
+const MAX_TITLE_LENGTH = 40;
+
 type TabType = 'home' | 'quests' | 'shop' | 'profile';
 
 const App = () => {
-  const [characterAnimation, setCharacterAnimation] = useState<string>('idle.gif');
-  const [editTitle, setEditTitle] = useState<string>('');
-  const [editIcon, setEditIcon] = useState<string>('');
-  const [selectedIcon, setSelectedIcon] = useState<string>('/quest.webp');
-  const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
-  const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [energy, setEnergy] = useState<number>(0);
-  const [diamonds] = useState<number>(1000);
-  const [adventureNumber, setAdventureNumber] = useState<number>(1); // Add this state for tracking adventure number
-  const [maxEnergy, setMaxEnergy] = useState<number>(15); // Initial max energy requirement
+  const [adventureNumber, setAdventureNumber] = useState<number>(1);
+  const [maxEnergy, setMaxEnergy] = useState<number>(15);
+  const [characterAnimation, setCharacterAnimation] = useState<string>('idle.gif');
+  
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [selectedIcon, setSelectedIcon] = useState<string>(DEFAULT_ICON);
+  const [quickAddTitle, setQuickAddTitle] = useState<string>('');
+  const [newQuestTitle, setNewQuestTitle] = useState<string>('');
+  const [questsRemaining, setQuestsRemaining] = useState<number>(10);
+  const [nextQuestResetTime, setNextQuestResetTime] = useState<Date | null>(null);
+ 
+  const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
   const [showAdventureModal, setShowAdventureModal] = useState<boolean>(false);
   const [showAddQuestModal, setShowAddQuestModal] = useState<boolean>(false);
-  const [quests, setQuests] = useState<Quest[]>([
+  const [activeTab, setActiveTab] = useState<'home' | 'quests' | 'shop' | 'profile'>('home');
 
-  ]);
+  const [isOnAdventure, setIsOnAdventure] = useState(false);
+  const [adventureEndTime, setAdventureEndTime] = useState<number | null>(null);
+  const [remainingTime, setRemainingTime] = useState('');
+  const [adventureProgress, setAdventureProgress] = useState(0);
 
+  const [diamonds, setDiamonds] = useState<number>(0);
+  const [pendingDiamonds, setPendingDiamonds] = useState<number | null>(null);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+ 
+  function formatTime(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}s`;
+  }
+  
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (value: string) => void
+  ) => {
+    
+    const sanitizedValue = e.target.value.slice(0, MAX_TITLE_LENGTH);
+    setter(sanitizedValue);
+  };
+  
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    
+    setTimeout(() => {
+      if (document.activeElement !== e.target) {
+        e.target.blur();
+      }
+    }, 100);
+  };
+  
+  const createQuest = (title: string): Quest | null => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return null;
+
+    return {
+      id: Date.now(), 
+      title: trimmedTitle,
+      energy: 5,
+      iconPath: selectedIcon
+    };
+  };
+  
   const getOrdinalSuffix = (number: number): string => {
-    // Get the last digit of the number
+    
     const lastDigit = number % 10;
-    // Get the last two digits of the number
+    
     const lastTwoDigits = number % 100;
     
-    // Special cases for 11, 12, 13
+    
     if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
       return 'th';
     }
     
-    // Handle other cases based on last digit
+    
     switch (lastDigit) {
       case 1:
         return 'st';
@@ -99,32 +138,28 @@ const App = () => {
         return 'th';
     }
   };
-
-
-  const startEditing = (quest: Quest): void => {
-    const updatedQuests = quests.map(q => ({
+   
+  const startEditing = (quest: Quest) => {
+    setQuests(prev => prev.map(q => ({
       ...q,
       isEditing: q.id === quest.id
-    }));
-    setQuests(updatedQuests);
+    })));
     setEditTitle(quest.title);
-    setEditIcon(quest.iconPath);
+    setSelectedIcon(quest.iconPath);
   };
 
-  const saveEdit = (id: number): void => {
-    setQuests(quests.map(quest => {
-      if (quest.id === id) {
-        return {
-          ...quest,
-          title: editTitle,
-          iconPath: editIcon,
-          isEditing: false
-        };
-      }
-      return quest;
-    }));
+  const saveEdit = (id: number) => {
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle) return;
+
+    setQuests(prev => prev.map(quest => 
+      quest.id === id
+        ? { ...quest, title: trimmedTitle, iconPath: selectedIcon, isEditing: false }
+        : quest
+    ));
+    
     setEditTitle('');
-    setEditIcon('');
+    setSelectedIcon(DEFAULT_ICON);
   };
 
   const cancelEdit = (): void => {
@@ -132,10 +167,23 @@ const App = () => {
       ...quest,
       isEditing: false
     })));
+    
+    
     setEditTitle('');
-    setEditIcon('');
+    setSelectedIcon('/quest.webp'); 
   };
 
+  const handleQuickAdd = () => {
+    const newQuest = createQuest(quickAddTitle);
+    if (newQuest) {
+      setQuests(prev => [...prev, newQuest]);
+      
+      setQuickAddTitle('');
+      setSelectedIcon(DEFAULT_ICON);
+      setShowQuickAdd(false);
+    }
+  };
+  
   const [sideQuests] = useState<SideQuest[]>([
     { 
       id: 1, 
@@ -152,8 +200,7 @@ const App = () => {
       completed: false 
     }
   ]);
-  const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [newQuestTitle, setNewQuestTitle] = useState<string>('');
+ 
   const [vouchers] = useState<Voucher[]>([
     { id: 1, title: 'Koykoy 50PHP Voucher', diamonds: 5000, expires: '2024-12-31' },
     { id: 2, title: 'Nuda 100PHP', diamonds: 25000, expires: '2024-12-31' },
@@ -166,64 +213,155 @@ const App = () => {
     { id: 'exercise',  imagePath: '/exercise.webp' },
     { id: 'work', imagePath: '/work.webp' },
     
-    // Add more icon options as needed
+    
   ];
-
   
-
   useEffect(() => {
     if (energy >= maxEnergy) {
       setShowAdventureModal(true);
     }
   }, [energy, maxEnergy]);
 
-  const startAdventure = (): void => {
+  useEffect(() => {
+    
+    if (energy >= maxEnergy && !isOnAdventure) {
+      setShowAdventureModal(true);
+    }
+  }, [energy, maxEnergy, isOnAdventure]);
+  
+  const startAdventure = () => {
+    if (isOnAdventure) {
+      return;
+    }
+    
     setEnergy(0);
     setAdventureNumber(prev => prev + 1);
-    setMaxEnergy(prev => prev + 5);
+    setMaxEnergy(prev => prev < 50 ? prev + 5 : prev);
     setShowAdventureModal(false);
-    // Change the character animation to rightadv.gif
+    setIsOnAdventure(true);
+    
+    const adventureDuration = 30000; 
+    const endTime = Date.now() + adventureDuration;
+    setAdventureEndTime(endTime);
+    
     setCharacterAnimation('rightadv.gif');
     
-    // Reset the animation back to idle after 3 seconds
+    
+    const diamondReward = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
+    setPendingDiamonds(diamondReward);
+    
     setTimeout(() => {
       setCharacterAnimation('idle.gif');
-    }, 300000);
+      setIsOnAdventure(false);
+      setAdventureEndTime(null);
+      setShowRewardModal(true);
+    }, adventureDuration);
   };
 
-  const handleAddQuest = (title: string, closeModal?: () => void): void => {
-    if (title.trim()) {
+  const collectDiamonds = () => {
+    if (pendingDiamonds) {
+      setDiamonds(prev => prev + pendingDiamonds);
+      setPendingDiamonds(null);
+      setShowRewardModal(false);
+    }
+  };
+ 
+  useEffect(() => {
+    let timer: number | undefined;
+  
+    if (isOnAdventure && adventureEndTime) {
+      const totalDuration = 30000; 
+      const startTime = Date.now();
+  
+      setAdventureProgress(0);
+  
+      timer = window.setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - startTime;
+  
+        if (now >= adventureEndTime) {
+          setIsOnAdventure(false);
+          setAdventureEndTime(null);
+          setRemainingTime('00:00');
+          setAdventureProgress(100);
+          clearInterval(timer);
+        } else {
+          const timeLeft = adventureEndTime - now;
+          setRemainingTime(formatTime(timeLeft));
+  
+          const progress = Math.min(100, (elapsed / totalDuration) * 100);
+          setAdventureProgress(Math.round(progress));
+        }
+      }, 1000);
+    }
+  
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [isOnAdventure, adventureEndTime]);
+
+  const completeQuest = (quest: Quest) => {
+    setEnergy(prev => Math.min(maxEnergy, prev + quest.energy));
+    setQuests(prev => prev.filter(q => q.id !== quest.id));
+  };
+
+  const QuestInput = ({ 
+    value, 
+    onChange, 
+    placeholder,
+    onEnter,
+    autoFocus 
+  }: {
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder: string;
+    onEnter?: () => void;
+    autoFocus?: boolean;
+  }) => (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full p-3 pr-12 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        autoFocus={autoFocus}
+        onBlur={handleInputBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onEnter) {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
+      />
+      <div className="absolute right-3 top-3 text-gray-400 text-sm">
+        {MAX_TITLE_LENGTH - value.length}
+      </div>
+    </div>
+  );
+
+  const handleAddQuest = (): void => {
+    if (newQuestTitle.trim()) {
       const newQuest: Quest = {
         id: quests.length + 1,
-        title: title.trim(),
+        title: newQuestTitle.trim(),
         energy: 5,
         iconPath: selectedIcon
       };
       setQuests([...quests, newQuest]);
       
-      // Reset input and UI state
-      if (closeModal) {
-        closeModal(); // Close modal if provided
-      } else {
-        setShowQuickAdd(false); // Close quick add if not in modal
-      }
-      
-      // Reset states
-      setQuickAddTitle('');
       setNewQuestTitle('');
       setSelectedIcon('/quest.webp');
+      setShowAddQuestModal(false);
     }
   };
 
   const deleteQuest = (id: number): void => {
     setQuests(quests.filter(quest => quest.id !== id));
   };
-
-  const completeQuest = (quest: Quest): void => {
-    setEnergy(prev => Math.min(maxEnergy, prev + quest.energy));
-    deleteQuest(quest.id);
-  };
-
+ 
   const QuestList = (): JSX.Element => (
     <div className="space-y-4">
       {quests.map(quest => (
@@ -236,41 +374,44 @@ const App = () => {
                     <DropdownMenuTrigger className="p-2 rounded hover:bg-gray-700 active:bg-gray-600 transition-colors duration-150 border border-gray-700">
                       <img src={selectedIcon} className="h-8 w-8 rounded" alt="Selected icon" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide"> {/* Adjusted width, added max height and scroll */}
-                    <div className="grid grid-cols-1 gap-2"> {/* Changed to 1 column */}
-                      {iconOptions.map((option) => (
-                        <DropdownMenuItem
-                          key={option.id}
-                          onClick={() => setSelectedIcon(option.imagePath)}
-                          className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
-                            selectedIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''
-                          }`}
-                        >
-                          <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
-                  </DropdownMenuContent>
+                    <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide">
+                      <div className="grid grid-cols-1 gap-2">
+                        {iconOptions.map((option) => (
+                          <DropdownMenuItem
+                            key={option.id}
+                            onClick={() => setSelectedIcon(option.imagePath)}
+                            className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
+                              selectedIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''
+                            }`}
+                          >
+                            <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    </DropdownMenuContent>
                   </DropdownMenu>
                   
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
-                    className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    // Added properties for better mobile handling
-                    inputMode="text" // Explicitly set input mode
-                    autoComplete="off" // Prevent unwanted autocomplete
-                    autoCorrect="off" // Disable autocorrect
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        saveEdit(quest.id);
-                      } else if (e.key === 'Escape') {
-                        cancelEdit();
-                      }
-                    }}
-                  />
+                  {/* Modified input field with character counter */}
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value.slice(0, 40))}
+                      className="w-full p-2 pr-12 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveEdit(quest.id);
+                        } else if (e.key === 'Escape') {
+                          cancelEdit();
+                        }
+                      }}
+                    />
+                    {/* Added character counter */}
+                    <div className="absolute right-3 top-2 text-gray-400 text-sm">
+                      {40 - editTitle.length}
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex space-x-2">
@@ -289,7 +430,7 @@ const App = () => {
                 </div>
               </div>
             ) : (
-              // View mode
+              
               <div className="flex items-center space-x-3">
                 <img src={quest.iconPath} className="rounded h-8 w-8" alt="Quest icon" />
                 <span>{quest.title}</span>
@@ -332,7 +473,7 @@ const App = () => {
           </div>
         </Card>
       ))}
-  
+
       {/* Quick Add Quest Section */}
       {showQuickAdd ? (
         
@@ -362,25 +503,22 @@ const App = () => {
               
               <div className="flex-1">
                 <div className="relative">
-                <input
-                  type="text"
-                  value={quickAddTitle}
-                  onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
-                  placeholder="Enter Quest Title"
-                  className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  inputMode="text"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddQuest(quickAddTitle);
-                    } else if (e.key === 'Escape') {
-                      setShowQuickAdd(false);
-                      setQuickAddTitle('');
-                    }
-                  }}
-                />
+                  <input
+                    type="text"
+                    value={quickAddTitle}
+                    onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
+                    placeholder="Enter Main Quest"
+                    className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleQuickAdd();
+                      } else if (e.key === 'Escape') {
+                        setShowQuickAdd(false);
+                        setQuickAddTitle('');
+                      }
+                    }}
+                  />
                   <div className="absolute right-3 top-3 text-gray-400 text-sm">
                     {40 - quickAddTitle.length}
                   </div>
@@ -389,13 +527,13 @@ const App = () => {
             </div>
 
             <div className="flex justify-start space-x-2">
-            <button
-            onClick={() => handleAddQuest(quickAddTitle)}
-            disabled={!quickAddTitle.trim()}
-            className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Add Quest
-          </button>
+              <button
+                onClick={handleQuickAdd}
+                disabled={!quickAddTitle.trim()}
+                className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Quest
+              </button>
               <button
                 onClick={() => {
                   setShowQuickAdd(false);
@@ -423,38 +561,55 @@ const App = () => {
   const HomeContent = (): JSX.Element => {
     return (
       <div className="space-y-4 p-4">
-        <div className="bg-gray-800 rounded-lg p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <img src="/energy.webp" className="rounded h-8 w-8" />
-              {/* Updated to show dynamic ordinal suffix */}
-              <span className="text-white font-medium">
-                {adventureNumber}
-                <span className="text-xs align-top">
-                  {getOrdinalSuffix(adventureNumber)}
-                </span>
-                {' Adventure'}
-              </span>
-            </div>
-            <span className="text-white font-medium">{energy} / {maxEnergy}</span>
-          </div>
-          <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div 
-              className="bg-yellow-400 rounded-full h-2 transition-all duration-300 ease-in-out" 
-              style={{ width: `${(energy / maxEnergy) * 100}%` }}
-            />
-          </div>
-          <div className="text-gray-300 text-sm">
-            Gain ⚡ energy so Alto can go discover new things today!
-          </div>
-        </div>
 
-        <div className="text-gray-300 flex items-center space-x-2">
-          <span>{quests.length} main quests left for today!</span>
+      
+      <div className="bg-gray-800 rounded-lg p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <img src="/energy.webp" className="rounded h-8 w-8" />
+            <span className="text-white font-medium">
+              {isOnAdventure ? (
+                "Adventure ongoing"
+              ) : (
+                <>
+                  {adventureNumber}
+                  <span className="text-xs align-top">
+                    {getOrdinalSuffix(adventureNumber)}
+                  </span>
+                  {' Adventure'}
+                </>
+              )}
+            </span>
+          </div>
+          <span className="text-white font-medium">
+            {isOnAdventure ? (
+              <span className="text-yellow-400">{remainingTime} left</span>
+            ) : (
+              `${energy} / ${maxEnergy}`
+            )}
+          </span>
         </div>
-
-        <QuestList />
+        <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+          <div 
+            className="bg-yellow-400 rounded-full h-2 transition-all duration-300 ease-in-out" 
+            style={{ width: `${(energy / maxEnergy) * 100}%` }}
+          />
+        </div>
+        <div className="text-gray-300 text-sm">
+          {isOnAdventure ? (
+            "Alto is on an adventure! Complete quests and save energy for the next adventure."
+          ) : (
+            "Gain ⚡ energy so Alto can go discover new things today!"
+          )}
+        </div>
       </div>
+
+      <div className="text-gray-300 flex items-center space-x-2">
+        <span>{quests.length} main quests left for today!</span>
+      </div>
+
+      <QuestList />
+    </div>
     );
   };
 
@@ -592,6 +747,7 @@ const App = () => {
     </div>
   );
 
+
   const renderContent = (): JSX.Element => {
     switch (activeTab) {
       case 'home':
@@ -610,7 +766,7 @@ const App = () => {
   return (
     
     <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto relative">
-      {/* Add winter background image as a fixed background */}
+      {/* Background Image Layer */}
       <div 
         className="fixed inset-0 max-w-3xl mx-auto z-0"
         style={{
@@ -618,38 +774,65 @@ const App = () => {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: 0.8, // Adjust opacity to ensure content remains visible
+          opacity: 0.8,
         }}
       />
        {/* Add an overlay to ensure content readability */}
        <div className="fixed inset-0 max-w-3xl mx-auto bg-black opacity-30 z-0" />
 
         {/* Ensure all content is above the background by adding z-10 */}
-      <div className="bg-transparent text-white p-4 flex justify-between items-center relative z-10">
-        <div></div>
-        <div className="flex items-center space-x-2">
-          <span>💎</span>
-          <span>{diamonds.toLocaleString()}</span>
+        <div className="bg-transparent text-white p-4 flex justify-between items-center relative z-10">
+          <div></div>
+          <div className="flex items-center bg-gray-800 space-x-2 pr-4 pl-4 pt-1 pb-1 rounded-lg">
+            <span>💎</span>
+            <span>{diamonds.toLocaleString()}</span>
+          </div>
         </div>
-      </div>
 
-      <AlertDialog open={showAdventureModal}>
+      <AlertDialog open={showAdventureModal && !isOnAdventure}>
         <AlertDialogContent className="bg-gray-800 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">
               Adventure Ready!
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-300">
-              Alto has gathered enough energy to go on an adventure! 
-              Start the journey to discover new things!
+              {isOnAdventure 
+                ? "Alto is currently on an adventure! Complete quests and wait for the current adventure to end."
+                : "Alto has gathered enough energy to go on an adventure! Start the journey to discover new things!"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction
               onClick={startAdventure}
-              className="bg-yellow-400 text-black hover:bg-yellow-500"
+              className={`${
+                isOnAdventure 
+                  ? 'bg-gray-600 cursor-not-allowed'
+                  : 'bg-yellow-400 hover:bg-yellow-500'
+              } text-black`}
+              disabled={isOnAdventure}
             >
-              Start Adventure
+              {isOnAdventure ? 'Adventure in Progress' : 'Start Adventure'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showRewardModal}>
+        <AlertDialogContent className="bg-gray-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">
+              Adventure Complete!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Alto has returned from the adventure and collected {pendingDiamonds} diamonds! 💎
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={collectDiamonds}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black"
+            >
+              Collect Rewards
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -687,21 +870,19 @@ const App = () => {
               </DropdownMenu>
 
               <div className="flex-1">
-              <input
-                type="text"
-                value={newQuestTitle}
-                onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
-                placeholder="Enter Quest Title"
-                className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                inputMode="text"
-                autoComplete="off"
-                autoCorrect="off"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddQuest(newQuestTitle, () => setShowAddQuestModal(false));
-                  }
-                }}
-              />
+                <input
+                  type="text"
+                  value={newQuestTitle}
+                  onChange={(e) => setNewQuestTitle(e.target.value.slice(0, 40))}
+                  placeholder="Enter Main Quest"
+                  maxLength={40}
+                  className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddQuest();
+                    }
+                  }}
+                />
               
               </div>
             </div>
@@ -715,7 +896,7 @@ const App = () => {
               Cancel
             </button>
             <button
-              onClick={() => handleAddQuest(newQuestTitle, () => setShowAddQuestModal(false))}
+              onClick={handleAddQuest}
               className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500"
               disabled={!newQuestTitle.trim()}
             >
@@ -730,13 +911,14 @@ const App = () => {
         <div className="relative h-56 bg-transparent">
           <div className="absolute inset-0 flex justify-center items-center">
             <img 
-              src={characterAnimation} // Use the dynamic animation state here
+              src={characterAnimation}
               alt="Center decoration" 
               className={`h-[180px] w-[160px] ml-10 ${
-                // Add padding classes when rightadv.gif is selected
+              
                 characterAnimation === 'rightadv.gif' ? 'mr-20 ' : ''
               }`}
             />
+            
           </div>
         </div>
 

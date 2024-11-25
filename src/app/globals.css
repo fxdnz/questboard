@@ -70,6 +70,16 @@ body {
       -ms-overflow-style: none;  /* IE and Edge */
       scrollbar-width: none;  /* Firefox */
   }
+
+  .spinner {
+    border-top-color: transparent;
+    border-radius: 50%;
+    border: 3px solid #ccc;
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+  }
+  
+  
 }
 
 @layer base {
@@ -78,5 +88,14 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
