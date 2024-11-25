@@ -50,7 +50,6 @@ export default function MainApplication() {
   const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
   const [pendingDiamonds, setPendingDiamonds] = useState<number>(0);
 
-  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false); // New state
 
   const handleStartAdventure = () => {
     if (isOnAdventure) return;

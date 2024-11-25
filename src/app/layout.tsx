@@ -1,7 +1,6 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next'
 import { AuthProvider } from '@/context/authContext';
-import { NavigationProvider } from '@/context/NavigationContext';
 import { Inter } from 'next/font/google'
 import './globals.css'
 

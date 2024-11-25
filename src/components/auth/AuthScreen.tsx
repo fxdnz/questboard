@@ -6,7 +6,6 @@ import { useAuth } from '@/context/authContext';
 
 const AuthScreen = () => {
   const [isLoginView, setIsLoginView] = useState(true);
-  const { userLoggedIn } = useAuth();
 
   const handleLogin = () => {
     // Additional login success handling if needed

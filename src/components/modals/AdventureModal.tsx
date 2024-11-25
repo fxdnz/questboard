@@ -16,8 +16,6 @@ export default function AdventureModal({
   isVisible,
   onClose,
   onStartAdventure,
-  adventureNumber,
-  maxEnergy,
   isOnAdventure
 }: AdventureModalProps): JSX.Element {
   return (
