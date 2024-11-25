@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';  // Import FirebaseError for type narrowing
 import { auth } from './firebase';  // Assuming you're using Firebase auth instance here
 
@@ -27,29 +27,44 @@ export const doSignInWithEmailAndPassword = async (email: string, password: stri
 };
 
 // Function to sign in with Google
-export const doSignInWithGoogle = async (): Promise<UserCredential | null> => {
+export const doSignInWithGoogle = async (): Promise<void> => {
   const provider = new GoogleAuthProvider();
+
   try {
-    const result = await signInWithPopup(auth, provider);
-    return result;
+    // Initiate Google sign-in with redirect
+    await signInWithRedirect(auth, provider);
   } catch (error: unknown) {
     if (error instanceof FirebaseError) {
-      // Now TypeScript knows that 'error' is an instance of FirebaseError
-      if (error.code === 'auth/popup-closed-by-user') {
-        // Ignore if the popup was closed by the user
-        console.log('Google sign-in popup closed by the user');
-      } else if (error.code === 'auth/unauthorized-domain') {
-        // Handle the unauthorized domain error
-        alert('This domain is not authorized to use Google Sign-In. Please check the domain settings in Firebase Console.');
-      } else {
-        console.error('Error during Google sign-in:', error);
-        alert('An error occurred during sign-in. Please try again.');
-      }
+      // Handle Firebase-specific errors
+      console.error('Error initiating Google sign-in with redirect:', error);
+      alert('An error occurred during sign-in. Please try again.');
     } else {
       console.error('Unexpected error:', error);
       alert('An unexpected error occurred.');
     }
-    return null;
+  }
+};
+
+// Function to get the result of the sign-in after the redirect
+export const handleRedirectResult = async (): Promise<void> => {
+  try {
+    // Get the result of the redirect sign-in
+    const result = await getRedirectResult(auth);
+
+    if (result) {
+      console.log('User signed in with Google:', result.user);
+      // You can redirect or update UI here based on result
+    } else {
+      console.log('No redirect result found.');
+    }
+  } catch (error: unknown) {
+    if (error instanceof FirebaseError) {
+      console.error('Error getting redirect result:', error);
+      alert('An error occurred while retrieving the result. Please try again.');
+    } else {
+      console.error('Unexpected error:', error);
+      alert('An unexpected error occurred.');
+    }
   }
 };
 
