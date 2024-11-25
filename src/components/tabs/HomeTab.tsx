@@ -179,7 +179,6 @@ const HomeTab = ({
           setEnergy={setEnergy} 
           maxEnergy={maxEnergy}
           isOnAdventure={isOnAdventure}
-          adventureProgress={adventureProgress}
         />
       </div>
     );
