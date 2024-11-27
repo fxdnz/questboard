@@ -2,7 +2,7 @@ import React, { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
-import { doSignInWithEmailAndPassword, doSignInWithGoogle } from '@/firebase/auth';
+import { doSignInWithEmailAndPassword } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app'; // Import FirebaseError for more specific error handling
 
 interface LoginScreenProps {
@@ -22,25 +22,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
     setIsLoading(true);
     try {
       await doSignInWithEmailAndPassword(loginEmail, loginPassword);
-      onLogin();
-    } catch (err: unknown) {
-      if (err instanceof FirebaseError) {
-        // Handle Firebase specific errors
-        setErrorMessage(err.message);
-      } else {
-        // Handle general errors
-        setErrorMessage('An unexpected error occurred. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await doSignInWithGoogle();
       onLogin();
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
@@ -119,27 +100,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
               </button>
             </div>
           </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 text-gray-400 bg-gray-900">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <Button
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 h-12"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              Google
-            </Button>
-          </div>
         </div>
       </div>
     </div>

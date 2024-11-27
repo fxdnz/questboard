@@ -2,7 +2,7 @@ import React, { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
-import { doCreateUserWithEmailAndPassword, doSignInWithGoogle } from '@/firebase/auth';
+import { doCreateUserWithEmailAndPassword } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app'; // Import FirebaseError for more specific error handling
 
 interface RegisterScreenProps {
@@ -37,28 +37,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
     setIsLoading(true);
     try {
       await doCreateUserWithEmailAndPassword(registerEmail, registerPassword);
-      onLogin({ email: registerEmail });
-    } catch (err: unknown) {
-      if (err instanceof FirebaseError) {
-        // Handle Firebase-specific errors
-        setError(err.message);
-      } else if (err instanceof Error) {
-        // Handle general JavaScript errors
-        setError(err.message);
-      } else {
-        // Catch any unexpected errors
-        setError('An unexpected error occurred. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await doSignInWithGoogle();
       onLogin({ email: registerEmail });
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
@@ -166,14 +144,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <Button 
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 h-12"
-              onClick={handleGoogleSignIn}
-            >
-              Google
-            </Button>
-          </div>
         </div>
       </div>
     </div>

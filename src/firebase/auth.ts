@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithRedirect, createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';  // Import FirebaseError for type narrowing
 import { auth } from './firebase';  // Assuming you're using Firebase auth instance here
 
@@ -23,48 +23,6 @@ export const doSignInWithEmailAndPassword = async (email: string, password: stri
     console.error('Error signing in:', error);
     handleFirebaseError(error);
     throw error;
-  }
-};
-
-// Function to sign in with Google
-export const doSignInWithGoogle = async (): Promise<void> => {
-  const provider = new GoogleAuthProvider();
-
-  try {
-    // Initiate Google sign-in with redirect
-    await signInWithRedirect(auth, provider);
-  } catch (error: unknown) {
-    if (error instanceof FirebaseError) {
-      // Handle Firebase-specific errors
-      console.error('Error initiating Google sign-in with redirect:', error);
-      alert('An error occurred during sign-in. Please try again.');
-    } else {
-      console.error('Unexpected error:', error);
-      alert('An unexpected error occurred.');
-    }
-  }
-};
-
-// Function to get the result of the sign-in after the redirect
-export const handleRedirectResult = async (): Promise<void> => {
-  try {
-    // Get the result of the redirect sign-in
-    const result = await getRedirectResult(auth);
-
-    if (result) {
-      console.log('User signed in with Google:', result.user);
-      // You can redirect or update UI here based on result
-    } else {
-      console.log('No redirect result found.');
-    }
-  } catch (error: unknown) {
-    if (error instanceof FirebaseError) {
-      console.error('Error getting redirect result:', error);
-      alert('An error occurred while retrieving the result. Please try again.');
-    } else {
-      console.error('Unexpected error:', error);
-      alert('An unexpected error occurred.');
-    }
   }
 };
 
