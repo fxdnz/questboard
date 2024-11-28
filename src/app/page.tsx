@@ -1,6 +1,7 @@
 // app/page.tsx
 'use client'
 
+import { useEffect } from 'react';
 import { useAuth } from '@/context/authContext';
 import AuthScreen from '@/components/auth/AuthScreen';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -10,6 +11,35 @@ import { AdventureProvider } from '@/context/AdventureContext';
 
 export default function Home() {
   const { userLoggedIn, loading } = useAuth();
+
+  // Disable zooming on mobile devices by setting the viewport meta tag
+  useEffect(() => {
+    const metaTag = document.querySelector('meta[name="viewport"]');
+    if (metaTag) {
+      metaTag.setAttribute(
+        'content',
+        'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
+      );
+    } else {
+      const newMetaTag = document.createElement('meta');
+      newMetaTag.setAttribute('name', 'viewport');
+      newMetaTag.setAttribute(
+        'content',
+        'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
+      );
+      document.head.appendChild(newMetaTag);
+    }
+
+    return () => {
+      // Cleanup: Reset the meta tag when the component unmounts
+      if (metaTag) {
+        metaTag.setAttribute(
+          'content',
+          'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes'
+        );
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
