@@ -20,7 +20,6 @@ export default function MainApplication() {
   // Use AdventureContext for adventure-related state
   const { 
     adventureProgress, 
-    startAdventure, 
 
     updateAdventureProgress 
   } = useAdventureProgress();

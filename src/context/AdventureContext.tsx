@@ -58,7 +58,7 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   // Method to start an adventure
-  const startAdventure = (diamondReward?: number) => {
+  const startAdventure = () => {
     const adventureDuration = 30000; // 30 seconds
     const endTime = Date.now() + adventureDuration;
 
