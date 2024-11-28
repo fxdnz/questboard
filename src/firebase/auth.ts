@@ -85,7 +85,8 @@ export const doSendEmailVerification = async (): Promise<void> => {
 };
 
 // Function to handle Firebase errors and alert the user
-const handleFirebaseError = (error: unknown) => {
+// Function to handle Firebase errors and return the error message
+export const handleFirebaseError = (error: unknown): string => {
   let errorMessage = 'An unexpected error occurred. Please try again.';
 
   // Check if the error is an instance of FirebaseError
@@ -121,6 +122,6 @@ const handleFirebaseError = (error: unknown) => {
     console.error('Unexpected error:', error);
   }
 
-  // Show the error message using alert
-  alert(errorMessage);
+  return errorMessage;
+
 };

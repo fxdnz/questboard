@@ -24,7 +24,7 @@ const ShopTab = () => {
 
   // Function to handle the purchase action
   const handleBuy = (voucher: Voucher) => {
-    alert(`You have bought the ${voucher.title} for ${voucher.diamonds} 💎`);
+    console.log(`You have bought the ${voucher.title} for ${voucher.diamonds} 💎`);
   };
 
   return (

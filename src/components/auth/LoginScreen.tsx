@@ -2,7 +2,7 @@ import React, { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
-import { doSignInWithEmailAndPassword } from '@/firebase/auth';
+import { doSignInWithEmailAndPassword, handleFirebaseError } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app';
 
 interface LoginScreenProps {
@@ -27,26 +27,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
       onLogin();
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
-        // Map specific Firebase error codes to custom error messages
-        switch (err.code) {
-          case 'auth/user-not-found':
-            setEmailError('No account found with this email.');
-            break;
-          case 'auth/invalid-email':
-            setEmailError('Invalid email address.');
-            break;
-          case 'auth/wrong-password':
-            setEmailError('Incorrect email or password.');
-            break;
-          case 'auth/invalid-credential':
-            setEmailError('Invalid login credentials.');
-            break;
-          case 'auth/network-request-failed':
-            setEmailError('Network error. Please check your connection.');
-            break;
-          default:
-            setEmailError('An unexpected error occurred. Please try again.');
-        }
+        // Use the handleFirebaseError function to get the error message
+        const errorMessage = handleFirebaseError(err);
+        setEmailError(errorMessage); // Set the error message in state
       } else {
         setEmailError('An unexpected error occurred. Please try again.');
       }
@@ -97,8 +80,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
               />
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-white hover:bg-white text-black font-semibold h-12 text-lg"
               disabled={isLoading}
             >
