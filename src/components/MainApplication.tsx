@@ -4,7 +4,6 @@ import ShopTab from '@/components/tabs/ShopTab';
 import SideQuestsTab from '@/components/tabs/SideQuestsTab';
 import ProfileTab from '@/components/tabs/ProfileTab';
 import AddQuestModal from '@/components/modals/AddQuestModal';
-import AdventureModal from '@/components/modals/AdventureModal';
 import RewardModal from '@/components/modals/RewardModal';
 import Navigation from '@/components/layout/Navigation';
 import Header from '@/components/layout/Header';
@@ -22,17 +21,11 @@ export default function MainApplication() {
   const { 
     adventureProgress, 
     startAdventure, 
-    endAdventure, 
+
     updateAdventureProgress 
   } = useAdventureProgress();
 
-  const handleStartAdventure = () => {
-    const minDiamonds = 100;
-    const maxDiamonds = 500;
-    const diamondReward = Math.floor(Math.random() * (maxDiamonds - minDiamonds + 1)) + minDiamonds;
-
-    startAdventure(diamondReward);
-  };
+  
 
   const handleCollectRewards = () => {
     addDiamonds(adventureProgress.pendingDiamonds);

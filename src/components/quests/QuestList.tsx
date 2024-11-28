@@ -4,7 +4,6 @@ import { Check, Edit2, Trash2, Plus, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { ICON_OPTIONS, DEFAULT_ICON } from '@/lib/constants';
 import { Quest } from '@/types';
-import { useAdventureProgress } from '@/context/AdventureContext';
 
 interface QuestListProps {
   quests: Quest[];
@@ -26,7 +25,7 @@ const QuestList: React.FC<QuestListProps> = ({
   maxEnergy, 
   isOnAdventure,
 }) => {
-  const { adventureProgress } = useAdventureProgress();
+  
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [quickAddIcon, setQuickAddIcon] = useState<string>(DEFAULT_ICON);
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
@@ -296,7 +295,7 @@ const QuestList: React.FC<QuestListProps> = ({
                     type="text"
                     value={quickAddTitle}
                     onChange={(e) => setQuickAddTitle(e.target.value.slice(0, 40))}
-                    placeholder={isOnAdventure ? "Enter Adventure Quest" : "Enter Main Quest"}
+                    placeholder="Enter Quest"
                     className="w-full p-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     autoFocus
                     onKeyDown={(e) => {
@@ -318,7 +317,7 @@ const QuestList: React.FC<QuestListProps> = ({
                 disabled={!quickAddTitle.trim()}
                 className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add {isOnAdventure ? "Adventure Quest" : "Quest"}
+                Add Quest
               </button>
               <button
                 onClick={() => {
@@ -338,7 +337,7 @@ const QuestList: React.FC<QuestListProps> = ({
           className="w-full p-3 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-center space-x-2"
         >
           <Plus size={20} />
-          <span>Add {isOnAdventure ? "Adventure Quest" : "Quest"}</span>
+          <span>Add Quest</span>
         </button>
       )}
     </div>

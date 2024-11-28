@@ -15,7 +15,7 @@ interface AdventureContextType {
   adventureProgress: AdventureProgressType;
   updateAdventureProgress: (updates: Partial<AdventureProgressType>) => void;
   resetAdventureProgress: () => void;
-  startAdventure: (diamondReward: number) => void;
+  startAdventure: (diamondReward?: number) => void;
   endAdventure: () => void;
 }
 
@@ -58,7 +58,7 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   // Method to start an adventure
-  const startAdventure = (diamondReward: number) => {
+  const startAdventure = (diamondReward?: number) => {
     const adventureDuration = 30000; // 30 seconds
     const endTime = Date.now() + adventureDuration;
 
@@ -76,6 +76,7 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Method to end an adventure
   const endAdventure = () => {
+    // If no specific reward is passed, generate a random reward
     const diamondReward = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
     setAdventureProgress(prev => ({
