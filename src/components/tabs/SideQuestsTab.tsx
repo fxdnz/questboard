@@ -1,24 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { INITIAL_SIDE_QUESTS, SideQuest1, sideQuestUtils } from '@/data/sideQuestData';
 
-interface SideQuest {
-  id: number;
-  title: string;
-  reward: number;
-  progress: string;
-  completed: boolean;
-}
+export default function SideQuestsTab() {
+  const [sideQuests, setSideQuests] = useState<SideQuest1[]>(INITIAL_SIDE_QUESTS);
 
-interface SideQuestsTabProps {
-  sideQuests: SideQuest[];
-  onClaim: (id: number) => void; // Callback to handle claim action
-}
-
-export default function SideQuestsTab({ sideQuests, onClaim }: SideQuestsTabProps) {
   const getProgress = (progress: string) => {
     const [current, total] = progress.split('/').map(Number);
     return (current / total) * 100;
+  };
+
+  const handleClaim = (id: number) => {
+    setSideQuests(prevQuests => 
+      sideQuestUtils.claimReward(prevQuests, id)
+    );
   };
 
   return (
@@ -38,7 +34,7 @@ export default function SideQuestsTab({ sideQuests, onClaim }: SideQuestsTabProp
                     <h3 className="text-lg font-semibold text-white">{quest.title}</h3>
                   </div>
 
-                  <div >
+                  <div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-slate-400">Progress</span>
                       <div className="flex items-center gap-3">
@@ -66,14 +62,14 @@ export default function SideQuestsTab({ sideQuests, onClaim }: SideQuestsTabProp
 
                       <button
                         className={`px-4 py-2 rounded-full text-white font-semibold ${
-                          progressPercentage === 100
-                            ? 'bg-green-600 hover:bg-green-500 active:bg-green-700'
-                            : 'bg-gray-600 cursor-not-allowed'
+                          quest.completed
+                            ? 'bg-green-600 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-500 active:bg-green-700'
                         }`}
-                        onClick={() => onClaim(quest.id)}
-                        disabled={progressPercentage !== 100} // Disable if progress is not 100%
+                        onClick={() => handleClaim(quest.id)}
+                        disabled={!quest.completed} 
                       >
-                        {progressPercentage === 100 ? 'Claim' : 'Claim'}
+                        {quest.completed ? 'Claimed' : 'Claim'}
                       </button>
                     </div>
                   </div>

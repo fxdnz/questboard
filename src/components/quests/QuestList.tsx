@@ -4,6 +4,7 @@ import { Check, Edit2, Trash2, Plus, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { ICON_OPTIONS, DEFAULT_ICON } from '@/lib/constants';
 import { Quest } from '@/types';
+import { useAdventureProgress } from '@/context/AdventureContext';
 
 interface QuestListProps {
   quests: Quest[];
@@ -11,7 +12,6 @@ interface QuestListProps {
   setEnergy: React.Dispatch<React.SetStateAction<number>>;
   maxEnergy: number;
   isOnAdventure: boolean;
-  
 }
 
 interface EditState {
@@ -25,8 +25,8 @@ const QuestList: React.FC<QuestListProps> = ({
   setEnergy, 
   maxEnergy, 
   isOnAdventure,
-  
 }) => {
+  const { adventureProgress } = useAdventureProgress();
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [quickAddIcon, setQuickAddIcon] = useState<string>(DEFAULT_ICON);
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
@@ -41,7 +41,7 @@ const QuestList: React.FC<QuestListProps> = ({
       id: Date.now(),
       title,
       iconPath: quickAddIcon,
-      energy: 5, // Always 3 energy per quest regardless of adventure state
+      energy: 5, // Always 5 energy per quest 
       isEditing: false,
     };
 
@@ -58,6 +58,7 @@ const QuestList: React.FC<QuestListProps> = ({
     }
     setQuests((prev) => prev.filter((q) => q.id !== quest.id));
   };
+
 
   const startEditing = (quest: Quest) => {
     setEditStates((prev) => ({

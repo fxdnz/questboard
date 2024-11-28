@@ -26,6 +26,7 @@ export interface Voucher {
   diamonds: number;
   expires: string;
   rarity:string;
+  icon:string;
 }
 
 export type User = {

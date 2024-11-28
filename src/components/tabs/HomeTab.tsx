@@ -2,138 +2,74 @@ import React, { useState, useEffect } from 'react';
 import QuestList from '../quests/QuestList';
 import { getOrdinalSuffix } from '../utils/helpers';
 import { Quest } from '@/types';
+import { useAdventureProgress } from '@/context/AdventureContext';
 import AdventureModal from '../modals/AdventureModal';
 import RewardModal from '../modals/RewardModal';
+import { useDiamonds } from '@/context/DiamondContext';
 
 interface HomeTabProps {
   quests: Quest[];
   setQuests: React.Dispatch<React.SetStateAction<Quest[]>>;
-  setCharacterAnimation: (animation: string) => void;
-  setDiamonds: React.Dispatch<React.SetStateAction<number>>;
-  // Add these new props
-  setShowAdventureModal: React.Dispatch<React.SetStateAction<boolean>>;
-  isOnAdventure: boolean;
-  adventureNumber: number;
 }
 
 const HomeTab = ({ 
   quests, 
-  setQuests, 
-  setCharacterAnimation,
-  setDiamonds 
-}: HomeTabProps): JSX.Element => {
-  // State
+  setQuests
+}: HomeTabProps) => {
+  const { addDiamonds } = useDiamonds();
+  const { 
+    adventureProgress, 
+    startAdventure, 
+    updateAdventureProgress 
+  } = useAdventureProgress();
+
   const [energy, setEnergy] = useState<number>(0);
-  const [maxEnergy, setMaxEnergy] = useState<number>(15);
-  const [isOnAdventure, setIsOnAdventure] = useState<boolean>(false);
-  const [adventureNumber, setAdventureNumber] = useState<number>(1);
-  const [remainingTime, setRemainingTime] = useState<string>('');
-  const [showAdventureModal, setShowAdventureModal] = useState<boolean>(false);
-  const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
-  const [pendingDiamonds, setPendingDiamonds] = useState<number | null>(null);
-  const [adventureEndTime, setAdventureEndTime] = useState<number | null>(null);
-  const [adventureProgress, setAdventureProgress] = useState<number>(0);
+  const [maxEnergy, setMaxEnergy] = useState<number>(() => {
+    // Start with 15 energy for the first adventure
+    // Increment by 5 for each subsequent adventure
+    return 15 + (Math.max(0, adventureProgress.adventureNumber - 1) * 5);
+  });
 
-  
-  const formatTime = (ms: number): string => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  const [isReadyForAdventure, setIsReadyForAdventure] = useState<boolean>(false);
 
-  const startAdventure = () => {
-    if (isOnAdventure) return;
-    
-    setEnergy(0);
-    setAdventureNumber(prev => prev + 1);
-    setMaxEnergy(prev => prev < 50 ? prev + 5 : prev);
-    setShowAdventureModal(false);
-    setIsOnAdventure(true);
-    
-    const adventureDuration = 30000; 
-    const endTime = Date.now() + adventureDuration;
-    setAdventureEndTime(endTime);
-    
-    setCharacterAnimation('rightadv.gif');
-    
-    const diamondReward = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
-    setPendingDiamonds(diamondReward);
-    
-    setTimeout(() => {
-      setCharacterAnimation('idle.gif');
-      setIsOnAdventure(false);
-      setAdventureEndTime(null);
-      setShowRewardModal(true);
-    }, adventureDuration);
-  };
-
+  // Collect diamonds when reward modal is shown
   const collectDiamonds = () => {
-    if (pendingDiamonds) {
-      setDiamonds(prev => prev + pendingDiamonds);
-      setPendingDiamonds(null);
-      setShowRewardModal(false);
+    if (adventureProgress.pendingDiamonds) {
+      addDiamonds(adventureProgress.pendingDiamonds);
+      updateAdventureProgress({ pendingDiamonds: 0 });
     }
   };
 
+  // Update max energy when adventure number changes
   useEffect(() => {
-    let timer: number | undefined;
-  
-    if (isOnAdventure && adventureEndTime) {
-      const totalDuration = 30000;
-      const startTime = Date.now();
-  
-      setAdventureProgress(0);
-  
-      timer = window.setInterval(() => {
-        const now = Date.now();
-        const elapsed = now - startTime;
-  
-        if (now >= adventureEndTime) {
-          setIsOnAdventure(false);
-          setAdventureEndTime(null);
-          setRemainingTime('00:00');
-          setAdventureProgress(100);
-          clearInterval(timer);
-        } else {
-          const timeLeft = adventureEndTime - now;
-          setRemainingTime(formatTime(timeLeft));
-  
-          const progress = Math.min(100, (elapsed / totalDuration) * 100);
-          setAdventureProgress(Math.round(progress));
-        }
-      }, 1000);
-    }
-  
-    return () => {
-      if (timer) {
-        clearInterval(timer);
-      }
-    };
-  }, [isOnAdventure, adventureEndTime]);
+    const newMaxEnergy = 15 + (Math.max(0, adventureProgress.adventureNumber - 1) * 5);
+    setMaxEnergy(newMaxEnergy);
+  }, [adventureProgress.adventureNumber]);
 
+  // Check if energy is full and adventure is not ongoing
   useEffect(() => {
-    if (energy >= maxEnergy && !isOnAdventure) {
-      setShowAdventureModal(true);
+    if (energy >= maxEnergy && !adventureProgress.isOnAdventure) {
+      setIsReadyForAdventure(true);
+    } else {
+      setIsReadyForAdventure(false);
     }
-  }, [energy, maxEnergy, isOnAdventure]);
+  }, [energy, maxEnergy, adventureProgress.isOnAdventure]);
 
   const HomeContent = (): JSX.Element => {
     return (
       <div className="space-y-4 p-4 ">
-        {/* Adventure and Energy Section */}
         <div className="bg-gray-800 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <img src="/energy.webp" className="rounded h-8 w-8" alt="Energy" />
               <span className="text-lg font-semibold text-white">
-                {isOnAdventure ? (
+                {adventureProgress.isOnAdventure ? (
                   "Adventure ongoing"
                 ) : (
                   <>
-                    {adventureNumber}
+                    {adventureProgress.adventureNumber}
                     <span className="text-xs align-top">
-                      {getOrdinalSuffix(adventureNumber)}
+                      {getOrdinalSuffix(adventureProgress.adventureNumber)}
                     </span>
                     {' Adventure'}
                   </>
@@ -141,8 +77,10 @@ const HomeTab = ({
               </span>
             </div>
             <span className="text-white font-medium">
-              {isOnAdventure ? (
-                <span className="text-yellow-400">{remainingTime} left</span>
+              {adventureProgress.isOnAdventure ? (
+                <span className="text-yellow-400">
+                  {adventureProgress.remainingTime}s left
+                </span>
               ) : (
                 `${energy} / ${maxEnergy}`
               )}
@@ -152,17 +90,17 @@ const HomeTab = ({
             <div
               className="bg-yellow-400 rounded-full h-2 transition-all duration-300 ease-in-out"
               style={{ 
-                width: isOnAdventure ? 
-                  `${adventureProgress}%` : 
+                width: adventureProgress.isOnAdventure ? 
+                  `${(30 - adventureProgress.remainingTime) / 30 * 100}%` : 
                   `${(energy / maxEnergy) * 100}%` 
               }}
             />
           </div>
           <div className="text-gray-300 text-sm">
-            {isOnAdventure ? (
+            {adventureProgress.isOnAdventure ? (
               "Alto is on an adventure! Complete quests to gain energy for the next adventure."
             ) : (
-              "Gain ⚡ energy so Alto can go discover new things today!"
+              `Gain ⚡ energy to go on the ${adventureProgress.adventureNumber}${getOrdinalSuffix(adventureProgress.adventureNumber)} adventure!`
             )}
           </div>
         </div>
@@ -178,7 +116,7 @@ const HomeTab = ({
           setQuests={setQuests} 
           setEnergy={setEnergy} 
           maxEnergy={maxEnergy}
-          isOnAdventure={isOnAdventure}
+          isOnAdventure={adventureProgress.isOnAdventure}
         />
       </div>
     );
@@ -188,17 +126,21 @@ const HomeTab = ({
     <div className="space-y-4">
       <HomeContent />
       <AdventureModal
-        isVisible={showAdventureModal}
-        onClose={() => setShowAdventureModal(false)}
-        onStartAdventure={startAdventure}
-        adventureNumber={adventureNumber}
+        isVisible={isReadyForAdventure}
+        onClose={() => {/* No-op, user must interact */}}
+        onStartAdventure={() => {
+          const diamondReward = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
+          startAdventure(diamondReward);
+          setEnergy(0); // Reset energy when adventure starts
+        }}
+        adventureNumber={adventureProgress.adventureNumber}
         maxEnergy={maxEnergy}
-        isOnAdventure={isOnAdventure}
+        isOnAdventure={adventureProgress.isOnAdventure}
       />
       <RewardModal
-        isVisible={showRewardModal}
-        onClose={() => setShowRewardModal(false)}
-        diamonds={pendingDiamonds}
+        isVisible={adventureProgress.pendingDiamonds > 0}
+        onClose={() => updateAdventureProgress({ pendingDiamonds: 0 })}
+        diamonds={adventureProgress.pendingDiamonds}
         onCollect={collectDiamonds}
       />
     </div>
@@ -206,4 +148,3 @@ const HomeTab = ({
 };
 
 export default HomeTab;
-

@@ -4,7 +4,9 @@
 import { useAuth } from '@/context/authContext';
 import AuthScreen from '@/components/auth/AuthScreen';
 import { NavigationProvider } from '@/context/NavigationContext';
+import { DiamondProvider } from '@/context/DiamondContext';
 import MainApplication from '@/components/MainApplication';
+import { AdventureProvider } from '@/context/AdventureContext';
 
 export default function Home() {
   const { userLoggedIn, loading } = useAuth();
@@ -23,7 +25,11 @@ export default function Home() {
 
   return (
     <NavigationProvider>
-      <MainApplication />
+      <DiamondProvider>
+        <AdventureProvider>
+          <MainApplication />
+        </AdventureProvider>
+      </DiamondProvider>
     </NavigationProvider>
   );
 }
