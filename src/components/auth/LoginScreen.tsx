@@ -5,7 +5,7 @@ import { PasswordInput } from './PasswordInput';
 import { doSignInWithEmailAndPassword, handleFirebaseError } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+
 
 interface LoginScreenProps {
   onLogin: () => void;
