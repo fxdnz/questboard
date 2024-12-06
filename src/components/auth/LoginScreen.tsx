@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
 import { doSignInWithEmailAndPassword, handleFirebaseError } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -17,13 +19,49 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
 
+  const saveUserToFirestore = async (user: any) => {
+    const db = getFirestore();
+    const userRef = doc(db, 'users', user.uid);
+
+    try {
+      // Check if user document already exists
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // Create new user document if it doesn't exist
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: user.displayName || '',
+          createdAt: new Date(),
+          lastLogin: new Date(),
+        });
+      } else {
+        // Update last login time for existing users
+        await setDoc(userRef, {
+          lastLogin: new Date(),
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Error saving user to Firestore:", error);
+      // Optionally, you could set an error state here
+    }
+  };
+
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setEmailError(''); // Reset any previous errors
 
     try {
-      await doSignInWithEmailAndPassword(loginEmail, loginPassword);
+      // Perform login
+      const userCredential = await doSignInWithEmailAndPassword(loginEmail, loginPassword);
+      
+      // Save user to Firestore
+      if (userCredential.user) {
+        await saveUserToFirestore(userCredential.user);
+      }
+
+      // Call onLogin callback
       onLogin();
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {

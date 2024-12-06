@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from './PasswordInput';
 import { doCreateUserWithEmailAndPassword } from '@/firebase/auth';
-import { FirebaseError } from 'firebase/app'; // Import FirebaseError for more specific error handling
+import { FirebaseError } from 'firebase/app';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 interface RegisterScreenProps {
   onLogin: ({ email }: { email: string }) => void;
@@ -20,10 +21,35 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
 
+  const saveUserToFirestore = async (user: any, username: string) => {
+    const db = getFirestore();
+    const userRef = doc(db, 'users', user.uid);
+
+    try {
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        username: username,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        emailVerified: user.emailVerified,
+        // Add any additional user fields you want to track
+        profile: {
+          displayName: username,
+          // You can add more profile-related fields here
+        }
+      });
+    } catch (error) {
+      console.error("Error saving user to Firestore:", error);
+      throw error;
+    }
+  };
+
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
+    // Validate inputs
     if (registerPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -34,14 +60,34 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
       return;
     }
 
+    if (!username.trim()) {
+      setError('Username is required');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await doCreateUserWithEmailAndPassword(registerEmail, registerPassword);
+      // Create user with email and password
+      const userCredential = await doCreateUserWithEmailAndPassword(registerEmail, registerPassword);
+      
+      // Save additional user info to Firestore
+      await saveUserToFirestore(userCredential.user, username);
+
+      // Trigger login callback
       onLogin({ email: registerEmail });
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
         // Handle Firebase-specific errors
-        setError(err.message);
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            setError('This email is already registered. Please use a different email.');
+            break;
+          case 'auth/invalid-email':
+            setError('Invalid email address. Please check and try again.');
+            break;
+          default:
+            setError(err.message || 'An error occurred during registration');
+        }
       } else if (err instanceof Error) {
         // Handle general JavaScript errors
         setError(err.message);
@@ -132,9 +178,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
               </button>
             </div>
           </form>
-
-          
-
         </div>
       </div>
     </div>

@@ -1,23 +1,47 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword, sendEmailVerification, UserCredential } from 'firebase/auth';
-import { FirebaseError } from 'firebase/app';  // Import FirebaseError for type narrowing
-import { auth } from './firebase';  // Assuming you're using Firebase auth instance here
+import { FirebaseError } from 'firebase/app';
+import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { auth } from './firebase';
 
-// Function to create a user with email and password
-export const doCreateUserWithEmailAndPassword = async (email: string, password: string): Promise<UserCredential> => {
+// Function to save user to Firestore
+export const saveUserToFirestore = async (user: UserCredential['user']) => {
+  const db = getFirestore();
+  const userRef = doc(db, 'users', user.uid);
+
   try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result;
-  } catch (error: unknown) {
-    console.error('Error creating user:', error);
-    handleFirebaseError(error);
-    throw error;  // Rethrow the error if you need to handle it further up the stack
+    // Check if user document already exists
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      // Create new user document if it doesn't exist
+      await setDoc(userRef, {
+        email: user.email,
+        displayName: user.displayName || '',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        // Add any additional user fields you want to track
+        emailVerified: user.emailVerified,
+      });
+    } else {
+      // Update last login time for existing users
+      await setDoc(userRef, {
+        lastLogin: new Date(),
+      }, { merge: true });
+    }
+  } catch (error) {
+    console.error("Error saving user to Firestore:", error);
+    throw error;
   }
 };
 
-// Function to sign in with email and password
+// Modify the existing sign-in function to save user to Firestore
 export const doSignInWithEmailAndPassword = async (email: string, password: string): Promise<UserCredential> => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
+    
+    // Save user to Firestore after successful sign-in
+    await saveUserToFirestore(result.user);
+    
     return result;
   } catch (error: unknown) {
     console.error('Error signing in:', error);
@@ -26,7 +50,23 @@ export const doSignInWithEmailAndPassword = async (email: string, password: stri
   }
 };
 
-// Function to sign out the current user
+// Modify the create user function to save user to Firestore
+export const doCreateUserWithEmailAndPassword = async (email: string, password: string): Promise<UserCredential> => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Save user to Firestore after successful user creation
+    await saveUserToFirestore(result.user);
+    
+    return result;
+  } catch (error: unknown) {
+    console.error('Error creating user:', error);
+    handleFirebaseError(error);
+    throw error;
+  }
+};
+
+// Rest of the existing functions remain the same...
 export const doSignOut = async (): Promise<void> => {
   try {
     await signOut(auth);
@@ -37,7 +77,6 @@ export const doSignOut = async (): Promise<void> => {
   }
 };
 
-// Function to send password reset email
 export const doPasswordReset = async (email: string): Promise<void> => {
   try {
     await sendPasswordResetEmail(auth, email);
@@ -48,7 +87,6 @@ export const doPasswordReset = async (email: string): Promise<void> => {
   }
 };
 
-// Function to change the password of the current user
 export const doPasswordChange = async (password: string): Promise<void> => {
   if (auth.currentUser) {
     try {
@@ -65,7 +103,6 @@ export const doPasswordChange = async (password: string): Promise<void> => {
   }
 };
 
-// Function to send email verification
 export const doSendEmailVerification = async (): Promise<void> => {
   if (auth.currentUser) {
     try {
@@ -84,14 +121,10 @@ export const doSendEmailVerification = async (): Promise<void> => {
   }
 };
 
-// Function to handle Firebase errors and alert the user
-// Function to handle Firebase errors and return the error message
 export const handleFirebaseError = (error: unknown): string => {
   let errorMessage = 'An unexpected error occurred. Please try again.';
 
-  // Check if the error is an instance of FirebaseError
   if (error instanceof FirebaseError) {
-    // Customize the error messages based on the error code
     switch (error.code) {
       case 'auth/invalid-email':
         errorMessage = 'The email address is invalid. Please enter a valid email address.';
@@ -115,7 +148,7 @@ export const handleFirebaseError = (error: unknown): string => {
         errorMessage = 'The authentication popup was closed before completion.';
         break;
       default:
-        console.error('Unhandled error:', error); // This will help you debug other errors.
+        console.error('Unhandled error:', error);
         break;
     }
   } else {
@@ -123,5 +156,4 @@ export const handleFirebaseError = (error: unknown): string => {
   }
 
   return errorMessage;
-
 };
