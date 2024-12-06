@@ -5,6 +5,7 @@ import { PasswordInput } from './PasswordInput';
 import { doCreateUserWithEmailAndPassword } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { FirestoreUserProfile, FirebaseUserWithProfile } from '@/firebase/userTypes';
 
 interface RegisterScreenProps {
   onLogin: ({ email }: { email: string }) => void;
@@ -21,10 +22,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const saveUserToFirestore = async (user: any, username: string) => {
+  const saveUserToFirestore = async (user: FirebaseUserWithProfile, username: string) => {
     const db = getFirestore();
     const userRef = doc(db, 'users', user.uid);
-
+  
     try {
       await setDoc(userRef, {
         uid: user.uid,
@@ -33,17 +34,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onLogin, onSwitchToLogi
         createdAt: new Date(),
         lastLogin: new Date(),
         emailVerified: user.emailVerified,
-        // Add any additional user fields you want to track
         profile: {
           displayName: username,
-          // You can add more profile-related fields here
+          // Add any additional profile fields
         }
-      });
+      } as FirestoreUserProfile);
     } catch (error) {
       console.error("Error saving user to Firestore:", error);
       throw error;
     }
   };
+  
 
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

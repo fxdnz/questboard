@@ -5,6 +5,7 @@ import { PasswordInput } from './PasswordInput';
 import { doSignInWithEmailAndPassword, handleFirebaseError } from '@/firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { FirestoreUserProfile, FirebaseUserWithProfile } from '@/firebase/userTypes';
 
 
 interface LoginScreenProps {
@@ -19,10 +20,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
 
-  const saveUserToFirestore = async (user: any) => {
+   // In LoginScreen
+   const saveUserToFirestore = async (user: FirebaseUserWithProfile) => {
     const db = getFirestore();
     const userRef = doc(db, 'users', user.uid);
-
+  
     try {
       // Check if user document already exists
       const userDoc = await getDoc(userRef);
@@ -30,11 +32,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onSwitchToRegister }
       if (!userDoc.exists()) {
         // Create new user document if it doesn't exist
         await setDoc(userRef, {
+          uid: user.uid,
           email: user.email,
-          displayName: user.displayName || '',
+          username: user.displayName || '',
           createdAt: new Date(),
           lastLogin: new Date(),
-        });
+          emailVerified: user.emailVerified,
+          profile: {
+            displayName: user.displayName || '',
+            photoURL: user.photoURL,
+          }
+        } as FirestoreUserProfile);
       } else {
         // Update last login time for existing users
         await setDoc(userRef, {
