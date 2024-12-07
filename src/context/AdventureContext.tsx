@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, firestore } from '@/firebase/firebase'; // Adjust this to your Firebase config path
 
 // Define the shape of adventure progress data
 interface AdventureProgressType {
@@ -17,6 +20,8 @@ interface AdventureContextType {
   resetAdventureProgress: () => void;
   startAdventure: (diamondReward?: number) => void;
   endAdventure: () => void;
+  loadAdventureProgress: () => Promise<void>;
+  saveAdventureProgress: (progress?: Partial<AdventureProgressType>) => Promise<void>;
 }
 
 const AdventureContext = createContext<AdventureContextType | undefined>(undefined);
@@ -43,18 +48,86 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // State to store adventure progress
   const [adventureProgress, setAdventureProgress] = useState<AdventureProgressType>(defaultProgress);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Method to save adventure progress to Firestore
+  const saveAdventureProgress = async (progress?: Partial<AdventureProgressType>) => {
+    if (!currentUser) return;
+
+    const progressToSave = progress ? { ...adventureProgress, ...progress } : adventureProgress;
+    
+    try {
+      const userDocRef = doc(firestore, 'userProgress', currentUser.uid);
+      await setDoc(userDocRef, {
+        adventureProgress: {
+          ...progressToSave,
+          // Convert Date/number to timestamp if needed
+          startTime: progressToSave.startTime,
+          adventureEndTime: progressToSave.adventureEndTime
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error("Error saving adventure progress:", error);
+    }
+  };
+
+  // Method to load adventure progress from Firestore
+  const loadAdventureProgress = async () => {
+    if (!currentUser) return;
+
+    try {
+      const userDocRef = doc(firestore, 'userProgress', currentUser.uid);
+      const docSnap = await getDoc(userDocRef);
+
+      if (docSnap.exists()) {
+        const savedProgress = docSnap.data().adventureProgress;
+        
+        if (savedProgress) {
+          // Restore progress, but handle ongoing adventures
+          const now = Date.now();
+          const savedEndTime = savedProgress.adventureEndTime;
+
+          if (savedProgress.isOnAdventure && savedEndTime && savedEndTime > now) {
+            // Adventure is still ongoing, update remaining time
+            const remainingTime = Math.max(0, Math.ceil((savedEndTime - now) / 1000));
+            
+            setAdventureProgress({
+              ...savedProgress,
+              remainingTime,
+              adventureEndTime: savedEndTime
+            });
+          } else if (savedProgress.isOnAdventure) {
+            // Adventure was ongoing but is now completed
+            setAdventureProgress({
+              ...defaultProgress,
+              adventureNumber: savedProgress.adventureNumber,
+              pendingDiamonds: Math.floor(Math.random() * (500 - 100 + 1)) + 100
+            });
+          } else {
+            // No active adventure
+            setAdventureProgress(savedProgress);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading adventure progress:", error);
+    }
+  };
 
   // Method to update adventure progress
   const updateAdventureProgress = (updates: Partial<AdventureProgressType>) => {
-    setAdventureProgress(prev => ({
-      ...prev,
-      ...updates
-    }));
+    const newProgress = { ...adventureProgress, ...updates };
+    setAdventureProgress(newProgress);
+    
+    // Save updates to Firestore
+    saveAdventureProgress(updates);
   };
 
   // Method to reset adventure progress
   const resetAdventureProgress = () => {
-    setAdventureProgress(defaultProgress);
+    const resetState = defaultProgress;
+    setAdventureProgress(resetState);
+    saveAdventureProgress(resetState);
   };
 
   // Method to start an adventure
@@ -62,31 +135,38 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
     const adventureDuration = 30000; // 30 seconds
     const endTime = Date.now() + adventureDuration;
 
-    setAdventureProgress(prev => ({
-      ...prev,
+    const newProgress = {
       isOnAdventure: true,
-      adventureNumber: prev.adventureNumber + 1,
+      adventureNumber: adventureProgress.adventureNumber + 1,
       startTime: Date.now(),
-      pendingDiamonds: 0, // Set to 0 when starting adventure
+      pendingDiamonds: 0,
       characterAnimation: 'rightadv.gif',
       remainingTime: adventureDuration / 1000,
       adventureEndTime: endTime
-    }));
+    };
+
+    setAdventureProgress(newProgress);
+    saveAdventureProgress(newProgress);
   };
 
   // Method to end an adventure
   const endAdventure = () => {
-    // If no specific reward is passed, generate a random reward
+    // Generate a random diamond reward
     const diamondReward = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
-    setAdventureProgress(prev => ({
-      ...prev,
+    const newProgress = {
       isOnAdventure: false,
       characterAnimation: 'idle.gif',
       remainingTime: 0,
       adventureEndTime: null,
-      pendingDiamonds: diamondReward // Set pending diamonds when adventure ends
+      pendingDiamonds: diamondReward
+    };
+
+    setAdventureProgress(prev => ({
+      ...prev,
+      ...newProgress
     }));
+    saveAdventureProgress(newProgress);
   };
 
   // Handle adventure timer
@@ -115,6 +195,24 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
   }, [adventureProgress.isOnAdventure, adventureProgress.adventureEndTime]);
 
+  // Listen for authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      
+      // Load adventure progress when user changes
+      if (user) {
+        loadAdventureProgress();
+      } else {
+        // Reset progress when no user is logged in
+        setAdventureProgress(defaultProgress);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
   return (
     <AdventureContext.Provider 
       value={{ 
@@ -122,7 +220,9 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
         updateAdventureProgress, 
         resetAdventureProgress,
         startAdventure,
-        endAdventure
+        endAdventure,
+        loadAdventureProgress,
+        saveAdventureProgress
       }}
     >
       {children}

@@ -6,6 +6,9 @@ import { useAdventureProgress } from '@/context/AdventureContext';
 import AdventureModal from '../modals/AdventureModal';
 import RewardModal from '../modals/RewardModal';
 import { useDiamonds } from '@/context/DiamondContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, firestore } from '@/firebase/firebase'; // Adjust this to your Firebase config path
 
 interface HomeTabProps {
   quests: Quest[];
@@ -25,12 +28,72 @@ const HomeTab = ({
 
   const [energy, setEnergy] = useState<number>(0);
   const [maxEnergy, setMaxEnergy] = useState<number>(() => {
-    // Start with 15 energy for the first adventure
-    // Increment by 5 for each subsequent adventure
     return 15 + (Math.max(0, adventureProgress.adventureNumber - 1) * 5);
   });
-
   const [isReadyForAdventure, setIsReadyForAdventure] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Fetch initial adventure progress
+  useEffect(() => {
+    const loadAdventureProgress = async (uid: string) => {
+      setIsLoading(true);
+      try {
+        const userDocRef = doc(firestore, 'userProgress', uid);
+        const docSnap = await getDoc(userDocRef);
+        
+        if (docSnap.exists()) {
+          const savedProgress = docSnap.data().adventureProgress;
+          
+          if (savedProgress) {
+            const now = Date.now();
+            const savedEndTime = savedProgress.adventureEndTime;
+
+            if (savedProgress.isOnAdventure && savedEndTime && savedEndTime > now) {
+              // Adventure is still ongoing, update remaining time
+              const remainingTime = Math.max(0, Math.ceil((savedEndTime - now) / 1000));
+              
+              updateAdventureProgress({
+                ...savedProgress,
+                remainingTime,
+                adventureEndTime: savedEndTime
+              });
+            } else if (savedProgress.isOnAdventure) {
+              // Adventure was ongoing but is now completed
+              updateAdventureProgress({
+                isOnAdventure: false,
+                adventureNumber: savedProgress.adventureNumber,
+                pendingDiamonds: Math.floor(Math.random() * (500 - 100 + 1)) + 100,
+                characterAnimation: 'idle.gif',
+                remainingTime: 0,
+                adventureEndTime: null
+              });
+            } else {
+              updateAdventureProgress(savedProgress);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load adventure progress:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Listen for authentication state changes
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      
+      if (user) {
+        loadAdventureProgress(user.uid);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   // Collect diamonds when reward modal is shown
   const collectDiamonds = () => {
@@ -54,6 +117,28 @@ const HomeTab = ({
       setIsReadyForAdventure(false);
     }
   }, [energy, maxEnergy, adventureProgress.isOnAdventure]);
+
+  // If still loading, show a loading state
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // If no user is logged in, show a login prompt
+  if (!currentUser) {
+    return (
+      <div className="flex justify-center items-center h-full text-center p-4">
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-xl text-white mb-4">Please Log In</h2>
+          <p className="text-gray-300 mb-4">You need to be logged in to view your adventure progress.</p>
+          {/* Add your login button/redirect logic here */}
+        </div>
+      </div>
+    );
+  }
 
   const HomeContent = (): JSX.Element => {
     return (
