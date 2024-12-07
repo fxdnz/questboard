@@ -22,23 +22,20 @@ const HomeTab = ({ quests, setQuests }: HomeTabProps) => {
   const [energy, setEnergy] = useState<number>(0);
   const [maxEnergy, setMaxEnergy] = useState<number>(15);
   const [isReadyForAdventure, setIsReadyForAdventure] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Load user adventure progress when authenticated
   useEffect(() => {
     const loadAdventureProgress = async (uid: string) => {
-      setIsLoading(true);
       try {
         const userDocRef = doc(firestore, 'userProgress', uid);
         const docSnap = await getDoc(userDocRef);
-
+  
         if (docSnap.exists()) {
           const savedProgress = docSnap.data().adventureProgress;
           if (savedProgress) {
             const now = Date.now();
             const savedEndTime = savedProgress.adventureEndTime;
-
+  
             if (savedProgress.isOnAdventure && savedEndTime && savedEndTime > now) {
               const remainingTime = Math.max(0, Math.ceil((savedEndTime - now) / 1000));
               updateAdventureProgress({ ...savedProgress, remainingTime, adventureEndTime: savedEndTime });
@@ -58,19 +55,16 @@ const HomeTab = ({ quests, setQuests }: HomeTabProps) => {
         }
       } catch (error) {
         console.error('Failed to load adventure progress:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
-
+  
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
       if (user) loadAdventureProgress(user.uid);
-      else setIsLoading(false);
     });
-
+  
     return () => unsubscribe();
-  }, []);
+  }, [updateAdventureProgress]); // Add `updateAdventureProgress` as a dependency
+  
 
   // Collect diamonds when available
   const collectDiamonds = () => {

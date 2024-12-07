@@ -172,46 +172,45 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Handle adventure timer
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
-
+  
     if (adventureProgress.isOnAdventure && adventureProgress.adventureEndTime) {
       timer = setInterval(() => {
         const now = Date.now();
         const timeLeft = Math.max(0, adventureProgress.adventureEndTime! - now);
-
+  
         if (timeLeft <= 0) {
           if (timer) clearInterval(timer);
-          endAdventure();
+          endAdventure(); // Using endAdventure inside effect
         } else {
-          updateAdventureProgress({
+          updateAdventureProgress({ // Using updateAdventureProgress inside effect
             remainingTime: Math.ceil(timeLeft / 1000),
             adventureEndTime: adventureProgress.adventureEndTime
           });
         }
       }, 1000);
     }
-
+  
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [adventureProgress.isOnAdventure, adventureProgress.adventureEndTime]);
+  }, [adventureProgress.isOnAdventure, adventureProgress.adventureEndTime, endAdventure, updateAdventureProgress]); // Add endAdventure and updateAdventureProgress to dependencies
+  
 
   // Listen for authentication state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       
-      // Load adventure progress when user changes
       if (user) {
-        loadAdventureProgress();
+        loadAdventureProgress(); // Using loadAdventureProgress inside effect
       } else {
-        // Reset progress when no user is logged in
-        setAdventureProgress(defaultProgress);
+        setAdventureProgress(defaultProgress); // Using defaultProgress inside effect
       }
     });
-
-    // Cleanup subscription on unmount
+  
     return () => unsubscribe();
-  }, []);
+  }, [defaultProgress, loadAdventureProgress]); // Add defaultProgress and loadAdventureProgress to dependencies
+  
 
   return (
     <AdventureContext.Provider 
