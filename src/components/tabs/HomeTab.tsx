@@ -7,7 +7,7 @@ import AdventureModal from '../modals/AdventureModal';
 import RewardModal from '../modals/RewardModal';
 import { useDiamonds } from '@/context/DiamondContext';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, firestore } from '@/firebase/firebase';
 
 interface HomeTabProps {
