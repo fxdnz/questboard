@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth'; // Import the User type
 import { auth, firestore } from '@/firebase/firebase'; // Adjust this to your Firebase config path
 
 // Define the shape of adventure progress data
@@ -48,7 +48,7 @@ export const AdventureProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // State to store adventure progress
   const [adventureProgress, setAdventureProgress] = useState<AdventureProgressType>(defaultProgress);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // Explicitly type as User | null
 
   // Method to save adventure progress to Firestore
   const saveAdventureProgress = async (progress?: Partial<AdventureProgressType>) => {

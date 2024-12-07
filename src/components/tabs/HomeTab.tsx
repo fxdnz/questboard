@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import QuestList from '../quests/QuestList';
 import { getOrdinalSuffix } from '../utils/helpers';
 import { Quest } from '@/types';
-import { useAdventureProgress } from '@/context/AdventureContext';
+import { useAdventureProgress} from '@/context/AdventureContext';
 import AdventureModal from '../modals/AdventureModal';
 import RewardModal from '../modals/RewardModal';
 import { useDiamonds } from '@/context/DiamondContext';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, firestore } from '@/firebase/firebase'; // Adjust this to your Firebase config path
 
 interface HomeTabProps {
@@ -32,7 +32,7 @@ const HomeTab = ({
   });
   const [isReadyForAdventure, setIsReadyForAdventure] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // Updated to User | null
 
   // Fetch initial adventure progress
   useEffect(() => {
@@ -190,7 +190,7 @@ const HomeTab = ({
           </div>
         </div>
 
-        {/* Quest Count Section */}
+        {/* Quest Count Section */} 
         <div className="text-gray-300">
           <span>{quests.length} main quests left for today!</span>
         </div>
