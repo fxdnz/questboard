@@ -49,13 +49,13 @@ export default function MainApplication() {
         <div
           className="absolute inset-0 w-full h-screen"
           style={{
-            backgroundImage: "url('/winter.png')",
+            backgroundImage: "url('/spring.png')",
             backgroundPosition: "top center",
             backgroundSize: "cover",
             backgroundRepeat: "no-repeat"
           }}
         />
-        <div className="absolute inset-0 w-full bg-black/30" />
+        <div className="absolute inset-0 w-full bg-black/10" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -66,7 +66,7 @@ export default function MainApplication() {
           </div>
         )}
 
-        <div className="relative h-52 mt-20">
+        <div className="relative h-52 mt-40">
           <div className="absolute inset-0 flex justify-center items-center">
             <img
               src={adventureProgress.characterAnimation}
