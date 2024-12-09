@@ -13,9 +13,7 @@ import { useAdventureProgress } from '@/context/AdventureContext';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   collection, 
-  doc, 
   addDoc, 
-  deleteDoc, 
   onSnapshot, 
 } from 'firebase/firestore';
 import { firestore } from '@/firebase/firebase';
@@ -79,8 +77,6 @@ export default function MainApplication() {
       console.error("Error adding quest:", error);
     }
   };
-
-  
 
   return (
     <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto relative">
