@@ -80,17 +80,7 @@ export default function MainApplication() {
     }
   };
 
-  // Delete a quest
-  const handleDeleteQuest = async (questId: string) => {
-    if (!user) return;
-
-    try {
-      const questRef = doc(firestore, 'users', user.uid, 'quests', questId);
-      await deleteDoc(questRef);
-    } catch (error) {
-      console.error("Error deleting quest:", error);
-    }
-  };
+  
 
   return (
     <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto relative">
