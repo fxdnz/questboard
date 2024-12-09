@@ -15,7 +15,7 @@ interface HomeTabProps {
   setQuests: React.Dispatch<React.SetStateAction<Quest[]>>;
 }
 
-const HomeTab = ({ quests, setQuests }: HomeTabProps) => {
+const HomeTab = ({ quests }: HomeTabProps) => {
   const { addDiamonds } = useDiamonds();
   const { adventureProgress, startAdventure, updateAdventureProgress } = useAdventureProgress();
 
