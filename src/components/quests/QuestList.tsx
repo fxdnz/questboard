@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Check, Edit2, Trash2, Plus, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { ICON_OPTIONS, DEFAULT_ICON } from '@/lib/constants';
 import { Quest } from '@/types';
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+} from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth'; // Assuming you have an auth hook
+import { firestore } from '@/firebase/firebase'; // Your Firebase config
 
 interface QuestListProps {
-  quests: Quest[];
-  setQuests: React.Dispatch<React.SetStateAction<Quest[]>>;
-  setEnergy: React.Dispatch<React.SetStateAction<number>>;
   maxEnergy: number;
-  isOnAdventure: boolean; // Keep this for potential future use, but don't restrict quest creation
+  setEnergy: React.Dispatch<React.SetStateAction<number>>;
+  isOnAdventure: boolean;
 }
 
 interface EditState {
@@ -19,36 +27,75 @@ interface EditState {
 }
 
 const QuestList: React.FC<QuestListProps> = ({ 
-  quests, 
-  setQuests, 
-  setEnergy, 
   maxEnergy, 
+  setEnergy, 
   isOnAdventure 
 }) => {
+  const [quests, setQuests] = useState<Quest[]>([]);
   const [quickAddTitle, setQuickAddTitle] = useState<string>('');
   const [quickAddIcon, setQuickAddIcon] = useState<string>(DEFAULT_ICON);
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
-  const [editStates, setEditStates] = useState<Record<number, EditState>>({});
-
+  const [editStates, setEditStates] = useState<Record<string, EditState>>({});
+  
+  const { user } = useAuth(); // Get current authenticated user
   const iconOptions = ICON_OPTIONS;
 
-  // Create a new quest - now always allows creation
-  const createQuest = (title: string): Quest | null => {
-    if (!title.trim()) return null;
-    const newQuest: Quest = { 
-      id: Date.now(), 
-      title, 
-      iconPath: quickAddIcon, 
-      energy: 5, 
-      isEditing: false 
-    };
-    return newQuest;
+  // Fetch quests for the current user
+  useEffect(() => {
+    if (!user) return;
+
+    // Reference to the user's quests collection
+    const questsRef = collection(firestore, 'users', user.uid, 'quests');
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(questsRef, (snapshot) => {
+      const fetchedQuests = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Quest));
+
+      setQuests(fetchedQuests);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [user]);
+
+  // Create a new quest in Firestore
+  const createQuest = async (title: string) => {
+    if (!user || !title.trim()) return null;
+
+    try {
+      const questsRef = collection(firestore, 'users', user.uid, 'quests');
+      const newQuest: Omit<Quest, 'id'> = { 
+        title, 
+        iconPath: quickAddIcon, 
+        energy: 5, 
+        isEditing: false 
+      };
+
+      const docRef = await addDoc(questsRef, newQuest);
+      return { ...newQuest, id: docRef.id };
+    } catch (error) {
+      console.error("Error adding quest:", error);
+      return null;
+    }
   };
 
   // Mark quest as complete
-  const completeQuest = (quest: Quest) => {
-    setEnergy(prev => Math.min(maxEnergy, prev + quest.energy));
-    setQuests(prev => prev.filter(q => q.id !== quest.id));
+  const completeQuest = async (quest: Quest) => {
+    if (!user) return;
+
+    try {
+      // Remove quest from Firestore
+      const questRef = doc(firestore, 'users', user.uid, 'quests', quest.id);
+      await deleteDoc(questRef);
+
+      // Update energy
+      setEnergy(prev => Math.min(maxEnergy, prev + quest.energy));
+    } catch (error) {
+      console.error("Error completing quest:", error);
+    }
   };
 
   // Start editing a quest
@@ -58,7 +105,7 @@ const QuestList: React.FC<QuestListProps> = ({
   };
 
   // Update edit state
-  const updateEditState = (questId: number, field: keyof EditState, value: string) => {
+  const updateEditState = (questId: string, field: keyof EditState, value: string) => {
     setEditStates(prev => ({ ...prev, [questId]: { ...prev[questId], [field]: value } }));
   };
 
@@ -69,25 +116,40 @@ const QuestList: React.FC<QuestListProps> = ({
   };
 
   // Save changes to a quest
-  const saveEdit = (questId: number) => {
-    const editState = editStates[questId];
+  const saveEdit = async (quest: Quest) => {
+    if (!user) return;
+
+    const editState = editStates[quest.id];
     if (!editState) return;
 
-    setQuests(prev => prev.map(quest =>
-      quest.id === questId
-        ? { ...quest, title: editState.title.trim() || quest.title, iconPath: editState.iconPath || quest.iconPath, isEditing: false }
-        : quest
-    ));
+    try {
+      const questRef = doc(firestore, 'users', user.uid, 'quests', quest.id);
+      
+      await updateDoc(questRef, {
+        title: editState.title.trim() || quest.title,
+        iconPath: editState.iconPath || quest.iconPath
+      });
 
-    setEditStates(prev => {
-      const newState = { ...prev };
-      delete newState[questId];
-      return newState;
-    });
+      // Update local state
+      setQuests(prev => prev.map(q => 
+        q.id === quest.id 
+          ? { ...q, title: editState.title.trim() || quest.title, iconPath: editState.iconPath || quest.iconPath, isEditing: false } 
+          : q
+      ));
+
+      // Clear edit state
+      setEditStates(prev => {
+        const newState = { ...prev };
+        delete newState[quest.id];
+        return newState;
+      });
+    } catch (error) {
+      console.error("Error saving quest edit:", error);
+    }
   };
 
   // Cancel editing a quest
-  const cancelEdit = (questId: number) => {
+  const cancelEdit = (questId: string) => {
     setEditStates(prev => {
       const newState = { ...prev };
       delete newState[questId];
@@ -97,25 +159,34 @@ const QuestList: React.FC<QuestListProps> = ({
   };
 
   // Delete a quest
-  const deleteQuest = (id: number) => {
-    setQuests(prev => prev.filter(quest => quest.id !== id));
-  };
+  const deleteQuest = async (id: string) => {
+    if (!user) return;
 
-  // Handle adding a new quest via quick add
-  const handleQuickAdd = () => {
-    const newQuest = createQuest(quickAddTitle);
-    if (newQuest) {
-      setQuests(prev => [...prev, newQuest]);
-      setQuickAddTitle('');
-      setQuickAddIcon(DEFAULT_ICON);
-      setShowQuickAdd(false); // Hide quick add form
+    try {
+      const questRef = doc(firestore, 'users', user.uid, 'quests', id);
+      await deleteDoc(questRef);
+    } catch (error) {
+      console.error("Error deleting quest:", error);
     }
   };
 
+  // Handle adding a new quest via quick add
+  const handleQuickAdd = async () => {
+    const newQuest = await createQuest(quickAddTitle);
+    if (newQuest) {
+      setQuickAddTitle('');
+      setQuickAddIcon(DEFAULT_ICON);
+      setShowQuickAdd(false);
+    }
+  };
+
+  // Render method remains largely the same as before...
   return (
     <div className="space-y-4">
       {quests.map((quest) => (
         <Card key={quest.id} className="p-3 bg-gray-800 text-white">
+          {/* Existing render logic with minor modifications */}
+          {/* Replace all quest.id usages in event handlers with methods that pass the full quest object */}
           <div className="flex justify-between items-center">
             {quest.isEditing ? (
               <div className="flex-1 space-y-3">
@@ -127,7 +198,11 @@ const QuestList: React.FC<QuestListProps> = ({
                     <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide">
                       <div className="grid grid-cols-1 gap-2">
                         {iconOptions.map((option) => (
-                          <DropdownMenuItem key={option.id} onClick={() => updateEditState(quest.id, 'iconPath', option.imagePath)} className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${editStates[quest.id]?.iconPath === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''}`}>
+                          <DropdownMenuItem 
+                            key={option.id} 
+                            onClick={() => updateEditState(quest.id, 'iconPath', option.imagePath)} 
+                            className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${editStates[quest.id]?.iconPath === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''}`}
+                          >
                             <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
                           </DropdownMenuItem>
                         ))}
@@ -142,7 +217,7 @@ const QuestList: React.FC<QuestListProps> = ({
                       className="w-full p-2 pr-12 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(quest.id);
+                        if (e.key === 'Enter') saveEdit(quest);
                         else if (e.key === 'Escape') cancelEdit(quest.id);
                       }}
                     />
@@ -151,10 +226,17 @@ const QuestList: React.FC<QuestListProps> = ({
                 </div>
 
                 <div className="flex space-x-2">
-                  <button onClick={() => saveEdit(quest.id)} disabled={!hasChanges(quest)} className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600">
+                  <button 
+                    onClick={() => saveEdit(quest)} 
+                    disabled={!hasChanges(quest)} 
+                    className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                  >
                     Save
                   </button>
-                  <button onClick={() => cancelEdit(quest.id)} className="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600">
+                  <button 
+                    onClick={() => cancelEdit(quest.id)} 
+                    className="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -169,7 +251,10 @@ const QuestList: React.FC<QuestListProps> = ({
             {!quest.isEditing && (
               <div className="flex items-center space-x-2">
                 <span className="text-yellow-400">{quest.energy}⚡</span>
-                <button onClick={() => completeQuest(quest)} className="p-1 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-700 transform transition-transform duration-75 focus:outline-none">
+                <button 
+                  onClick={() => completeQuest(quest)} 
+                  className="p-1 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-700 transform transition-transform duration-75 focus:outline-none"
+                >
                   <Check size={16} className="text-white" strokeWidth={3} />
                 </button>
                 <DropdownMenu>
@@ -177,11 +262,17 @@ const QuestList: React.FC<QuestListProps> = ({
                     <MoreVertical size={16} className="text-gray-400" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-gray-800 text-white border-gray-700">
-                    <DropdownMenuItem onClick={() => startEditing(quest)} className="text-white focus:text-gray-200 cursor-pointer">
+                    <DropdownMenuItem 
+                      onClick={() => startEditing(quest)} 
+                      className="text-white focus:text-gray-200 cursor-pointer"
+                    >
                       <Edit2 className="mr-2 h-4 w-4" />
                       Edit Quest
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => deleteQuest(quest.id)} className="text-red-400 focus:text-red-300 cursor-pointer">
+                    <DropdownMenuItem 
+                      onClick={() => deleteQuest(quest.id)} 
+                      className="text-red-400 focus:text-red-300 cursor-pointer"
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Quest
                     </DropdownMenuItem>
@@ -193,8 +284,12 @@ const QuestList: React.FC<QuestListProps> = ({
         </Card>
       ))}
 
+      {/* Quick add section remains the same */}
       {!showQuickAdd && (
-        <button onClick={() => setShowQuickAdd(true)} className="w-full p-3 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-center space-x-2">
+        <button 
+          onClick={() => setShowQuickAdd(true)} 
+          className="w-full p-3 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-center space-x-2"
+        >
           <Plus size={20} />
           <span>Add Quest</span>
         </button>
@@ -202,16 +297,22 @@ const QuestList: React.FC<QuestListProps> = ({
 
       {showQuickAdd && !isOnAdventure && (
         <Card className="p-3 bg-gray-800">
+          {/* Quick add form remains mostly the same */}
           <div className="space-y-3">
             <div className="flex space-x-3">
               <DropdownMenu>
+                {/* Icon selection dropdown */}
                 <DropdownMenuTrigger className="p-2 rounded hover:bg-gray-700 active:bg-gray-600 transition-colors duration-150 border border-gray-700">
                   <img src={quickAddIcon} className="h-8 w-8 rounded" alt="Selected icon" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-gray-800 border-gray-700 min-w-0 w-[52px] h-[200px] overflow-y-auto scrollbar-hide">
                   <div className="grid grid-cols-1 gap-2">
                     {iconOptions.map((option) => (
-                      <DropdownMenuItem key={option.id} onClick={() => setQuickAddIcon(option.imagePath)} className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${quickAddIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''}`}>
+                      <DropdownMenuItem 
+                        key={option.id} 
+                        onClick={() => setQuickAddIcon(option.imagePath)} 
+                        className={`p-1 rounded cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${quickAddIcon === option.imagePath ? 'bg-gray-600 ring-2 ring-yellow-400' : ''}`}
+                      >
                         <img src={option.imagePath} className="h-8 w-8 rounded" alt={`Icon ${option.id}`} />
                       </DropdownMenuItem>
                     ))}
@@ -240,10 +341,20 @@ const QuestList: React.FC<QuestListProps> = ({
               </div>
             </div>
             <div className="flex justify-start space-x-2">
-              <button onClick={handleQuickAdd} disabled={!quickAddTitle.trim()} className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button 
+                onClick={handleQuickAdd} 
+                disabled={!quickAddTitle.trim()} 
+                className="px-4 py-2 rounded bg-yellow-400 text-black hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Add Quest
               </button>
-              <button onClick={() => { setShowQuickAdd(false); setQuickAddTitle(''); }} className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition-colors">
+              <button 
+                onClick={() => { 
+                  setShowQuickAdd(false); 
+                  setQuickAddTitle(''); 
+                }} 
+                className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition-colors"
+              >
                 Cancel
               </button>
             </div>

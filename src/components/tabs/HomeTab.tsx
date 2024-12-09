@@ -137,8 +137,6 @@ const HomeTab = ({ quests, setQuests }: HomeTabProps) => {
 
       {/* Quest List */}
       <QuestList
-        quests={quests}
-        setQuests={setQuests}
         setEnergy={setEnergy}
         maxEnergy={maxEnergy}
         isOnAdventure={adventureProgress.isOnAdventure}

@@ -1,6 +1,6 @@
 //src/types/index.ts
 export interface Quest {
-  id: number;
+  id: string;
   title: string;
   energy: number;
   iconPath: string;
