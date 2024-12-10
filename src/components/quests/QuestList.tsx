@@ -11,6 +11,8 @@ import {
   updateDoc, 
   deleteDoc, 
   onSnapshot, 
+  writeBatch,
+  getDoc,
 } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth'; // Assuming you have an auth hook
 import { firestore } from '@/firebase/firebase'; // Your Firebase config
@@ -87,16 +89,38 @@ const QuestList: React.FC<QuestListProps> = ({
     if (!user) return;
 
     try {
-      // Remove quest from Firestore
-      const questRef = doc(firestore, 'users', user.uid, 'quests', quest.id);
-      await deleteDoc(questRef);
+        // Reference to the user's quests collection
+        const questRef = doc(firestore, 'users', user.uid, 'quests', quest.id);
 
-      // Update energy
-      setEnergy(prev => Math.min(maxEnergy, prev + quest.energy));
+        // Create a record in a 'completedQuests' field within the user's document
+        const userRef = doc(firestore, 'users', user.uid);
+        
+        // Batch write to handle both the quest deletion and user field update
+        const batch = writeBatch(firestore);
+
+        // Add a field to the user's document for tracking completed quests count
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+            const completedQuestsCount = (userDoc.data()?.completedQuestsCount || 0) + 1;
+
+            batch.update(userRef, { completedQuestsCount });
+        }
+
+        // Delete the quest from 'quests' collection (optional, if you still want to remove it)
+        batch.delete(questRef);
+
+        // Commit the batch write
+        await batch.commit();
+
+        // Update energy in the user's main collection
+        setEnergy((prev) => Math.min(maxEnergy, prev + quest.energy));
+
     } catch (error) {
-      console.error("Error completing quest:", error);
+        console.error("Error completing quest:", error);
     }
-  };
+};
+
+
 
   // Start editing a quest
   const startEditing = (quest: Quest) => {

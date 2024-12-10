@@ -79,7 +79,7 @@ export default function MainApplication() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col max-w-3xl mx-auto relative">
+    <div className="min-h-screen bg-black flex flex-col max-w-full mx-auto relative">
       <div className="absolute inset-0 w-full">
         <div
           className="absolute inset-0 w-full h-screen"
